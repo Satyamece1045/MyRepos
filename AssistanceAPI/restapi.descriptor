@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:restapiDescriptor xmlns="http://com.ibm.etools.mft.descriptor.base" xmlns:ns2="http://com.ibm.etools.mft.descriptor.restapi" definitionType="swagger_20" definitionFile="swagger.json" implementation="gen/AssistanceAPI.msgflow" https="true">
+    <references>
+        <sharedLibraryReference>
+            <libraryName>commonFlows</libraryName>
+        </sharedLibraryReference>
+    </references>
+    <ns2:operations>
+        <ns2:operation name="createAssistance" implementation="createAssistance.subflow"/>
+        <ns2:operation name="createCase" implementation="createCase.subflow"/>
+        <ns2:operation name="createCaseComment" implementation="createCaseComment.subflow"/>
+        <ns2:operation name="createComment" implementation="createComment.subflow"/>
+        <ns2:operation name="createIncident" implementation="createIncident.subflow"/>
+        <ns2:operation name="createIncidentCase" implementation="createIncidentCase.subflow"/>
+        <ns2:operation name="createIncidentNotification" implementation="createIncidentNotification.subflow"/>
+        <ns2:operation name="createService" implementation="createService.subflow"/>
+        <ns2:operation name="deleteAssistance" implementation="deleteAssistance.subflow"/>
+        <ns2:operation name="deleteIncident" implementation="deleteIncident.subflow"/>
+        <ns2:operation name="updateIncident" implementation="updateIncident.subflow"/>
+        <ns2:operation name="updateIncidentCase" implementation="updateIncidentCase.subflow"/>
+    </ns2:operations>
+    <ns2:errorHandlers/>
+</ns2:restapiDescriptor>

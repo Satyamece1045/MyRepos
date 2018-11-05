@@ -1,0 +1,2726 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "title" : "Assistance API",
+    "version" : "1.0.0",
+    "description" : "This API helps the users to get connected with all DreamTec related services"
+  },
+  "host" : "api-dev.isservices.co.za:7846",
+  "basePath" : "/api/v1/assistance",
+  "paths" : {
+    "/case" : {
+      "post" : {
+        "operationId" : "createCase",
+        "responses" : {
+          "200" : {
+            "description" : "The operation was successful."
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "Insert a case",
+        "parameters" : [ {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/assistanceDetails"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        }, {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "query",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The user name of the requesting user"
+        } ]
+      }
+    },
+    "/incident/case" : {
+      "post" : {
+        "operationId" : "createIncidentCase",
+        "summary" : "create incident case",
+        "responses" : {
+          "202" : {
+            "description" : "The request is accepted for processing",
+            "schema" : {
+              "$ref" : "#/definitions/Response"
+            }
+          },
+          "default" : {
+            "description" : "Unexpected error",
+            "schema" : {
+              "$ref" : "#/definitions/api_error"
+            }
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "create incident case",
+        "parameters" : [ {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The user name of the requesting user"
+        }, {
+          "name" : "sourceSystem",
+          "in" : "query",
+          "description" : "Filter Source system",
+          "required" : true,
+          "type" : "string",
+          "enum" : [ "dreamtec", "digital", "digicall", "uber" ],
+          "format" : "string"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/caseCreated"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        } ]
+      },
+      "put" : {
+        "operationId" : "updateIncidentCase",
+        "summary" : "update incident case",
+        "responses" : {
+          "202" : {
+            "description" : "The request is accepted for processing",
+            "schema" : {
+              "$ref" : "#/definitions/Response"
+            }
+          },
+          "default" : {
+            "description" : "Unexpected error",
+            "schema" : {
+              "$ref" : "#/definitions/api_error"
+            }
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "update incident case",
+        "parameters" : [ {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The user name of the requesting user"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/caseUpdated"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        } ]
+      }
+    },
+    "/incident" : {
+      "post" : {
+        "operationId" : "createIncident",
+        "summary" : "create incident",
+        "responses" : {
+          "202" : {
+            "description" : "The request is accepted for processing",
+            "schema" : {
+              "$ref" : "#/definitions/Response"
+            }
+          },
+          "default" : {
+            "description" : "Unexpected error",
+            "schema" : {
+              "$ref" : "#/definitions/api_error"
+            }
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "create incident",
+        "parameters" : [ {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The user name of the requesting user"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/caseServiceCreated"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        } ]
+      },
+      "put" : {
+        "operationId" : "updateIncident",
+        "summary" : "update incident",
+        "responses" : {
+          "202" : {
+            "description" : "The request is accepted for processing",
+            "schema" : {
+              "$ref" : "#/definitions/Response"
+            }
+          },
+          "default" : {
+            "description" : "Unexpected error",
+            "schema" : {
+              "$ref" : "#/definitions/api_error"
+            }
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "update incident",
+        "parameters" : [ {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The user name of the requesting user"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/updateIncident"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        } ]
+      },
+      "patch" : {
+        "operationId" : "deleteIncident",
+        "summary" : "delete incident",
+        "responses" : {
+          "202" : {
+            "description" : "The request is accepted for processing",
+            "schema" : {
+              "$ref" : "#/definitions/Response"
+            }
+          },
+          "default" : {
+            "description" : "Unexpected error",
+            "schema" : {
+              "$ref" : "#/definitions/api_error"
+            }
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "delete incident",
+        "parameters" : [ {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The user name of the requesting user"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/deleteIncident"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        } ]
+      }
+    },
+    "/{caseId}" : {
+      "post" : {
+        "operationId" : "createAssistance",
+        "responses" : {
+          "200" : {
+            "description" : "The operation was successful."
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "create an assistance service",
+        "parameters" : [ {
+          "required" : true,
+          "name" : "caseId",
+          "in" : "path",
+          "type" : "string",
+          "description" : "IMS CaseID",
+          "format" : "string"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/assistanceDetails"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "description" : "The user name of the requesting user",
+          "format" : "string"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        } ]
+      },
+      "patch" : {
+        "operationId" : "deleteAssistance",
+        "responses" : {
+          "200" : {
+            "description" : "The operation was successful."
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "Delete an assistance service",
+        "parameters" : [ {
+          "required" : true,
+          "name" : "caseId",
+          "in" : "path",
+          "type" : "string",
+          "description" : "IMS CaseID",
+          "format" : "string"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/deleteAssistanceRequest"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "description" : "The user name of the requesting user",
+          "format" : "string"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        } ]
+      }
+    },
+    "/service" : {
+      "post" : {
+        "operationId" : "createService",
+        "responses" : {
+          "200" : {
+            "description" : "The operation was successful."
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "Insert a dreamtecAssistance",
+        "parameters" : [ {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/createService"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        }, {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : false,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        } ]
+      }
+    },
+    "/incident/notification" : {
+      "post" : {
+        "operationId" : "createIncidentNotification",
+        "summary" : "Create incident Notification",
+        "responses" : {
+          "202" : {
+            "description" : "The request is accepted for processing",
+            "schema" : {
+              "$ref" : "#/definitions/Response"
+            }
+          },
+          "default" : {
+            "description" : "Unexpected error",
+            "schema" : {
+              "$ref" : "#/definitions/api_error"
+            }
+          }
+        },
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "description" : "Create incident notification",
+        "parameters" : [ {
+          "name" : "correlationId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "This is a process correlation Id which all messages related to the same logical business process instance should carry"
+        }, {
+          "name" : "Authorization",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "required" : true,
+          "description" : "OAuth2 token pre shared with Encentivise or obtained by calling authentication services."
+        }, {
+          "name" : "source",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The system/component/service name of the requester/publisher"
+        }, {
+          "name" : "publishUTC",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "Populated by publisher/requester at the time the message is published or sent"
+        }, {
+          "name" : "messageType",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "When present indicates the type of message and determines the schema that the message payload conforms to"
+        }, {
+          "name" : "messageId",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "A unique identifier (UID) which identifies this specific message instance"
+        }, {
+          "name" : "userName",
+          "in" : "header",
+          "type" : "string",
+          "format" : "string",
+          "description" : "The user name of the requesting user"
+        }, {
+          "name" : "targetSystem",
+          "in" : "query",
+          "description" : "Filter Source system",
+          "required" : true,
+          "type" : "string",
+          "enum" : [ "dreamtec", "digital", "digicall", "uber" ],
+          "format" : "string"
+        }, {
+          "name" : "body",
+          "in" : "body",
+          "schema" : {
+            "$ref" : "#/definitions/caseInfoRequest"
+          },
+          "description" : "The request body for the operation",
+          "required" : true
+        } ]
+      }
+    }
+  },
+  "definitions" : {
+    "api_error" : {
+      "type" : "object",
+      "properties" : {
+        "code" : {
+          "type" : "integer",
+          "format" : "int32"
+        },
+        "message" : {
+          "type" : "string"
+        },
+        "http_error_code" : {
+          "type" : "string"
+        }
+      }
+    },
+    "caseDetails" : {
+      "type" : "object",
+      "properties" : {
+        "policy" : {
+          "type" : "object",
+          "properties" : {
+            "policyNumber" : {
+              "type" : "string"
+            },
+            "imsId" : {
+              "type" : "string"
+            },
+            "imscaseId" : {
+              "type" : "string"
+            },
+            "incidentDate" : {
+              "type" : "string"
+            },
+            "imsServiceId" : {
+              "type" : "string"
+            }
+          }
+        },
+        "person" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/person"
+          }
+        },
+        "vehicles" : {
+          "type" : "object",
+          "properties" : {
+            "year" : {
+              "type" : "string"
+            },
+            "make" : {
+              "type" : "string"
+            },
+            "model" : {
+              "type" : "string"
+            },
+            "registrationNumber" : {
+              "type" : "string"
+            },
+            "colour" : {
+              "type" : "string"
+            }
+          }
+        },
+        "serviceProviders" : {
+          "type" : "object",
+          "properties" : {
+            "serviceProviderName" : {
+              "type" : "string"
+            },
+            "clientId" : {
+              "type" : "object",
+              "properties" : {
+                "operationsNodeId" : {
+                  "type" : "string"
+                },
+                "clientNodeId" : {
+                  "type" : "string"
+                },
+                "creatorNodeId" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "assistanceDetails" : {
+      "type" : "object",
+      "properties" : {
+        "serviceProviders" : {
+          "type" : "object",
+          "properties" : {
+            "serviceProviderName" : {
+              "type" : "string"
+            },
+            "caseId" : {
+              "type" : "string"
+            },
+            "caseReference" : {
+              "type" : "string"
+            },
+            "services" : {
+              "type" : "object",
+              "properties" : {
+                "serviceType" : {
+                  "type" : "object",
+                  "properties" : {
+                    "key" : {
+                      "type" : "string"
+                    },
+                    "value" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "serviceSubType" : {
+                  "type" : "object",
+                  "properties" : {
+                    "key" : {
+                      "type" : "string"
+                    },
+                    "value" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "creatorId" : {
+                  "type" : "string"
+                },
+                "instruction" : {
+                  "type" : "string"
+                },
+                "isServiceProviderOnScene" : {
+                  "type" : "string"
+                },
+                "locationDetails" : {
+                  "type" : "object",
+                  "properties" : {
+                    "requestLocation" : {
+                      "type" : "object",
+                      "properties" : {
+                        "extraLocationInformation" : {
+                          "type" : "string"
+                        },
+                        "lat" : {
+                          "type" : "string"
+                        },
+                        "lon" : {
+                          "type" : "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "policy" : {
+          "type" : "object",
+          "properties" : {
+            "imsId" : {
+              "type" : "string"
+            },
+            "imscaseId" : {
+              "type" : "string"
+            },
+            "imsServiceId" : {
+              "type" : "string"
+            }
+          }
+        },
+        "person" : {
+          "type" : "object",
+          "properties" : {
+            "firstName" : {
+              "type" : "string"
+            },
+            "lastName" : {
+              "type" : "string"
+            },
+            "contactDetail" : {
+              "type" : "object",
+              "properties" : {
+                "emailAddress" : {
+                  "type" : "string"
+                },
+                "contactNumber" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "person" : {
+      "type" : "object",
+      "properties" : {
+        "firstName" : {
+          "type" : "string"
+        },
+        "lastName" : {
+          "type" : "string"
+        },
+        "identification" : {
+          "type" : "object",
+          "properties" : {
+            "idNumber" : {
+              "type" : "string"
+            }
+          }
+        },
+        "dateOfBirth" : {
+          "type" : "string"
+        },
+        "contactDetail" : {
+          "type" : "object",
+          "properties" : {
+            "contactNumber" : {
+              "type" : "string"
+            },
+            "emailAddress" : {
+              "type" : "string"
+            }
+          }
+        },
+        "role" : {
+          "type" : "string"
+        },
+        "isPolicyHolder" : {
+          "type" : "string"
+        },
+        "isIMSCustomer" : {
+          "type" : "string"
+        }
+      }
+    },
+    "vehicles" : {
+      "type" : "object",
+      "properties" : {
+        "year" : {
+          "type" : "string"
+        },
+        "make" : {
+          "type" : "string"
+        },
+        "model" : {
+          "type" : "string"
+        },
+        "registrationNumber" : {
+          "type" : "string"
+        },
+        "colour" : {
+          "type" : "string"
+        }
+      }
+    },
+    "createDTAssistanceRequest" : {
+      "type" : "object",
+      "properties" : {
+        "policy" : {
+          "type" : "object",
+          "properties" : {
+            "policyNumber" : {
+              "type" : "string"
+            },
+            "imsId" : {
+              "type" : "string"
+            },
+            "imscaseId" : {
+              "type" : "string"
+            },
+            "incidentDate" : {
+              "type" : "string"
+            },
+            "imsServiceId" : {
+              "type" : "string"
+            }
+          }
+        },
+        "person" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/person"
+          }
+        },
+        "vehicles" : {
+          "type" : "object",
+          "items" : {
+            "$ref" : "#/definitions/vehicles"
+          }
+        },
+        "externalVendors" : {
+          "type" : "object",
+          "properties" : {
+            "dreamtecDetails" : {
+              "type" : "object",
+              "properties" : {
+                "operationsNodeId" : {
+                  "type" : "string"
+                },
+                "clientNodeId" : {
+                  "type" : "string"
+                },
+                "creatorNodeId" : {
+                  "type" : "string"
+                },
+                "caseDetails" : {
+                  "type" : "object",
+                  "properties" : {
+                    "caseId" : {
+                      "type" : "string"
+                    },
+                    "services" : {
+                      "type" : "object",
+                      "properties" : {
+                        "serviceType" : {
+                          "type" : "string"
+                        },
+                        "CaseServiceDefinitionId" : {
+                          "type" : "string"
+                        },
+                        "creatorId" : {
+                          "type" : "string"
+                        },
+                        "instruction" : {
+                          "type" : "string"
+                        },
+                        "isServiceProviderOnScene" : {
+                          "type" : "boolean"
+                        },
+                        "locationDetails" : {
+                          "type" : "object",
+                          "properties" : {
+                            "requestLocation" : {
+                              "type" : "object",
+                              "properties" : {
+                                "extraLocationInformation" : {
+                                  "type" : "string"
+                                },
+                                "lat" : {
+                                  "type" : "number"
+                                },
+                                "lon" : {
+                                  "type" : "number"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "caseCreated" : {
+      "type" : "object",
+      "properties" : {
+        "Id" : {
+          "type" : "string"
+        },
+        "DateCreated" : {
+          "type" : "string"
+        },
+        "DateOfIncident" : {
+          "type" : "string"
+        },
+        "References" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "ExternalReference" : {
+          "type" : "string"
+        },
+        "CaseClassification" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "MasterState" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "ContactPerson" : {
+          "type" : "object",
+          "properties" : {
+            "Initials" : {
+              "type" : "string"
+            },
+            "FirstName" : {
+              "type" : "string"
+            },
+            "Surname" : {
+              "type" : "string"
+            },
+            "CustomerId" : {
+              "type" : "string"
+            },
+            "DateOfBirth" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "AlternativeContactNumber" : {
+              "type" : "string"
+            },
+            "EmailAddress" : {
+              "type" : "string"
+            }
+          }
+        },
+        "incidentType" : {
+          "type" : "string"
+        },
+        "vehicleIncidentType" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "vehicleInnerDamage" : {
+          "type" : "object",
+          "properties" : {
+            "fluidsLeaking" : {
+              "type" : "string"
+            },
+            "bonnetCannotOpen" : {
+              "type" : "string"
+            },
+            "windscreenDamaged" : {
+              "type" : "string"
+            },
+            "wheelObstructed" : {
+              "type" : "string"
+            },
+            "airbagsDeployed" : {
+              "type" : "string"
+            },
+            "suspensionDamaged" : {
+              "type" : "string"
+            },
+            "undercarriageDamaged" : {
+              "type" : "string"
+            },
+            "vehicleOverturned" : {
+              "type" : "string"
+            }
+          }
+        },
+        "thirdPartyDetails" : {
+          "type" : "array",
+          "items" : {
+            "type" : "object",
+            "properties" : {
+              "saId" : {
+                "type" : "string"
+              },
+              "contactNumber" : {
+                "type" : "string"
+              },
+              "driverName" : {
+                "type" : "string"
+              },
+              "driverSurname" : {
+                "type" : "string"
+              },
+              "email" : {
+                "type" : "string"
+              },
+              "vehicleRegNumber" : {
+                "type" : "string"
+              },
+              "makeModel" : {
+                "type" : "string"
+              },
+              "insuranceProvider" : {
+                "type" : "string"
+              },
+              "color" : {
+                "type" : "string"
+              }
+            }
+          }
+        },
+        "thirdPartyCount" : {
+          "type" : "integer"
+        },
+        "passengerCount" : {
+          "type" : "integer"
+        },
+        "Vehicle" : {
+          "type" : "object",
+          "properties" : {
+            "LicensePlateNumber" : {
+              "type" : "string"
+            },
+            "Make" : {
+              "type" : "string"
+            },
+            "Year" : {
+              "type" : "string"
+            },
+            "Model" : {
+              "type" : "string"
+            },
+            "Description" : {
+              "type" : "string"
+            },
+            "Vin" : {
+              "type" : "string"
+            },
+            "Colour" : {
+              "type" : "string"
+            }
+          }
+        },
+        "Policy" : {
+          "type" : "object",
+          "properties" : {
+            "CompanyName" : {
+              "type" : "string"
+            },
+            "FirstName" : {
+              "type" : "string"
+            },
+            "Surname" : {
+              "type" : "string"
+            },
+            "IdentityNumber" : {
+              "type" : "string"
+            },
+            "DateOfBirth" : {
+              "type" : "string"
+            },
+            "PolicyNumber" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            }
+          }
+        },
+        "Client" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "Representative" : {
+              "type" : "object",
+              "properties" : {
+                "FirstName" : {
+                  "type" : "string"
+                },
+                "Surname" : {
+                  "type" : "string"
+                },
+                "ContactNumber" : {
+                  "type" : "string"
+                },
+                "EmailAddress" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "CustomerLiaison" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "Representative" : {
+              "type" : "object",
+              "properties" : {
+                "FirstName" : {
+                  "type" : "string"
+                },
+                "Surname" : {
+                  "type" : "string"
+                },
+                "ContactNumber" : {
+                  "type" : "string"
+                },
+                "EmailAddress" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "MedicalAid" : {
+          "type" : "object",
+          "properties" : {
+            "Company" : {
+              "type" : "string"
+            },
+            "Plan" : {
+              "type" : "string"
+            },
+            "MembershipNumber" : {
+              "type" : "string"
+            },
+            "MedicalConditions" : {
+              "type" : "string"
+            }
+          }
+        },
+        "drivable" : {
+          "type" : "string"
+        },
+        "serviceProviders" : {
+          "type" : "array",
+          "items" : {
+            "type" : "object",
+            "properties" : {
+              "serviceProviderName" : {
+                "type" : "string"
+              },
+              "services" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "serviceId" : {
+                      "type" : "string"
+                    },
+                    "reference" : {
+                      "type" : "string"
+                    },
+                    "serviceType" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "string"
+                        },
+                        "value" : {
+                          "type" : "string"
+                        }
+                      }
+                    },
+                    "serviceSubType" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "string"
+                        },
+                        "value" : {
+                          "type" : "string"
+                        }
+                      }
+                    },
+                    "creatorId" : {
+                      "type" : "string"
+                    },
+                    "instruction" : {
+                      "type" : "string"
+                    },
+                    "isServiceProviderOnScene" : {
+                      "type" : "string"
+                    },
+                    "locationDetails" : {
+                      "type" : "object",
+                      "properties" : {
+                        "requestLocation" : {
+                          "type" : "object",
+                          "properties" : {
+                            "extraLocationInformation" : {
+                              "type" : "string"
+                            },
+                            "lat" : {
+                              "type" : "string"
+                            },
+                            "lon" : {
+                              "type" : "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "OperationId" : {
+          "type" : "string"
+        },
+        "DateOfOperationTrigger" : {
+          "type" : "string"
+        }
+      }
+    },
+    "caseServiceCreated" : {
+      "type" : "object",
+      "properties" : {
+        "Id" : {
+          "type" : "string"
+        },
+        "CaseId" : {
+          "type" : "string"
+        },
+        "DateCreated" : {
+          "type" : "string"
+        },
+        "DateOfService" : {
+          "type" : "string"
+        },
+        "Reference" : {
+          "type" : "string"
+        },
+        "ExternalReference" : {
+          "type" : "string"
+        },
+        "CaseServiceDefinition" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "NextRequiredAction" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "State" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "BrokerageState" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "InitiationLocation" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "DirectedDestination" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "CustomerDirectedDestination" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "ActualDestination" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "RequestLocation" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "ServiceProviderLiaison" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "Representative" : {
+              "type" : "object",
+              "properties" : {
+                "FirstName" : {
+                  "type" : "string"
+                },
+                "Surname" : {
+                  "type" : "string"
+                },
+                "ContactNumber" : {
+                  "type" : "string"
+                },
+                "EmailAddress" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "ServiceProvider" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "ServiceProviderAssignment" : {
+              "type" : "object",
+              "properties" : {
+                "AuthorizationReference" : {
+                  "type" : "string"
+                },
+                "DateAssigned" : {
+                  "type" : "string"
+                },
+                "DispatchLocation" : {
+                  "type" : "object",
+                  "properties" : {
+                    "Latitude" : {
+                      "type" : "number"
+                    },
+                    "Longitude" : {
+                      "type" : "number"
+                    },
+                    "Address" : {
+                      "type" : "string"
+                    },
+                    "Suburb" : {
+                      "type" : "string"
+                    },
+                    "City" : {
+                      "type" : "string"
+                    },
+                    "Province" : {
+                      "type" : "string"
+                    },
+                    "Country" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "KilometersToIncidentByRoad" : {
+                  "type" : "number"
+                },
+                "Representative" : {
+                  "type" : "object",
+                  "properties" : {
+                    "FirstName" : {
+                      "type" : "string"
+                    },
+                    "Surname" : {
+                      "type" : "string"
+                    },
+                    "ContactNumber" : {
+                      "type" : "string"
+                    },
+                    "EmailAddress" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "RepresentativePhotoUrl" : {
+                  "type" : "string"
+                },
+                "PhysicalDevicePersonLinkId" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "isServiceProviderOnScene" : {
+          "type" : "string"
+        },
+        "serviceType" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "serviceSubType" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "OperationId" : {
+          "type" : "string"
+        },
+        "DateOfOperationTrigger" : {
+          "type" : "string"
+        }
+      }
+    },
+    "updateIncident" : {
+      "type" : "object",
+      "properties" : {
+        "CancellationReasonText" : {
+          "type" : "string"
+        },
+        "Id" : {
+          "type" : "string"
+        },
+        "CaseId" : {
+          "type" : "string"
+        },
+        "DateCreated" : {
+          "type" : "string"
+        },
+        "DateOfService" : {
+          "type" : "string"
+        },
+        "Reference" : {
+          "type" : "string"
+        },
+        "CaseServiceDefinition" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "NextRequiredAction" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "State" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "BrokerageState" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "InitiationLocation" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "DirectedDestination" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "CustomerDirectedDestination" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "ActualDestination" : {
+          "type" : "object",
+          "properties" : {
+            "Latitude" : {
+              "type" : "number"
+            },
+            "Longitude" : {
+              "type" : "number"
+            },
+            "Address" : {
+              "type" : "string"
+            },
+            "Suburb" : {
+              "type" : "string"
+            },
+            "City" : {
+              "type" : "string"
+            },
+            "Province" : {
+              "type" : "string"
+            },
+            "Country" : {
+              "type" : "string"
+            }
+          }
+        },
+        "ServiceProviderLiaison" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "Representative" : {
+              "type" : "object",
+              "properties" : {
+                "FirstName" : {
+                  "type" : "string"
+                },
+                "Surname" : {
+                  "type" : "string"
+                },
+                "ContactNumber" : {
+                  "type" : "string"
+                },
+                "EmailAddress" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "ServiceProvider" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "ServiceProviderAssignment" : {
+              "type" : "object",
+              "properties" : {
+                "AuthorizationReference" : {
+                  "type" : "string"
+                },
+                "DateAssigned" : {
+                  "type" : "string"
+                },
+                "DispatchLocation" : {
+                  "type" : "object",
+                  "properties" : {
+                    "Latitude" : {
+                      "type" : "number"
+                    },
+                    "Longitude" : {
+                      "type" : "number"
+                    },
+                    "Address" : {
+                      "type" : "string"
+                    },
+                    "Suburb" : {
+                      "type" : "string"
+                    },
+                    "City" : {
+                      "type" : "string"
+                    },
+                    "Province" : {
+                      "type" : "string"
+                    },
+                    "Country" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "KilometersToIncidentByRoad" : {
+                  "type" : "number"
+                },
+                "Representative" : {
+                  "type" : "object",
+                  "properties" : {
+                    "FirstName" : {
+                      "type" : "string"
+                    },
+                    "Surname" : {
+                      "type" : "string"
+                    },
+                    "ContactNumber" : {
+                      "type" : "string"
+                    },
+                    "EmailAddress" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "RepresentativePhotoUrl" : {
+                  "type" : "string"
+                },
+                "PhysicalDevicePersonLinkId" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "OperationId" : {
+          "type" : "string"
+        },
+        "DateOfOperationTrigger" : {
+          "type" : "string"
+        }
+      }
+    },
+    "Response" : {
+      "type" : "object",
+      "properties" : {
+        "WasSuccessful" : {
+          "type" : "boolean"
+        },
+        "ErrorMessage" : {
+          "type" : "string"
+        }
+      }
+    },
+    "caseUpdated" : {
+      "type" : "object",
+      "properties" : {
+        "Id" : {
+          "type" : "string"
+        },
+        "DateCreated" : {
+          "type" : "string"
+        },
+        "DateOfIncident" : {
+          "type" : "string"
+        },
+        "References" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "ExternalReference" : {
+          "type" : "string"
+        },
+        "CaseClassification" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "MasterState" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "ContactPerson" : {
+          "type" : "object",
+          "properties" : {
+            "Initials" : {
+              "type" : "string"
+            },
+            "FirstName" : {
+              "type" : "string"
+            },
+            "Surname" : {
+              "type" : "string"
+            },
+            "CustomerId" : {
+              "type" : "string"
+            },
+            "DateOfBirth" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "AlternativeContactNumber" : {
+              "type" : "string"
+            },
+            "EmailAddress" : {
+              "type" : "string"
+            }
+          }
+        },
+        "incidentType" : {
+          "type" : "string"
+        },
+        "vehicleIncidentType" : {
+          "type" : "object",
+          "properties" : {
+            "Key" : {
+              "type" : "string"
+            },
+            "Value" : {
+              "type" : "string"
+            }
+          }
+        },
+        "vehicleInnerDamage" : {
+          "type" : "object",
+          "properties" : {
+            "fluidsLeaking" : {
+              "type" : "string"
+            },
+            "bonnetCannotOpen" : {
+              "type" : "string"
+            },
+            "windscreenDamaged" : {
+              "type" : "string"
+            },
+            "wheelObstructed" : {
+              "type" : "string"
+            },
+            "airbagsDeployed" : {
+              "type" : "string"
+            },
+            "suspensionDamaged" : {
+              "type" : "string"
+            },
+            "undercarriageDamaged" : {
+              "type" : "string"
+            },
+            "vehicleOverturned" : {
+              "type" : "string"
+            }
+          }
+        },
+        "thirdPartyDetails" : {
+          "type" : "array",
+          "items" : {
+            "type" : "object",
+            "properties" : {
+              "saId" : {
+                "type" : "string"
+              },
+              "contactNumber" : {
+                "type" : "string"
+              },
+              "driverName" : {
+                "type" : "string"
+              },
+              "driverSurname" : {
+                "type" : "string"
+              },
+              "email" : {
+                "type" : "string"
+              },
+              "vehicleRegNumber" : {
+                "type" : "string"
+              },
+              "makeModel" : {
+                "type" : "string"
+              },
+              "insuranceProvider" : {
+                "type" : "string"
+              },
+              "color" : {
+                "type" : "string"
+              }
+            }
+          }
+        },
+        "thirdPartyCount" : {
+          "type" : "integer"
+        },
+        "passengerCount" : {
+          "type" : "integer"
+        },
+        "Vehicle" : {
+          "type" : "object",
+          "properties" : {
+            "LicensePlateNumber" : {
+              "type" : "string"
+            },
+            "Make" : {
+              "type" : "string"
+            },
+            "Description" : {
+              "type" : "string"
+            },
+            "Vin" : {
+              "type" : "string"
+            },
+            "Colour" : {
+              "type" : "string"
+            }
+          }
+        },
+        "Policy" : {
+          "type" : "object",
+          "properties" : {
+            "CompanyName" : {
+              "type" : "string"
+            },
+            "FirstName" : {
+              "type" : "string"
+            },
+            "Surname" : {
+              "type" : "string"
+            },
+            "IdentityNumber" : {
+              "type" : "string"
+            },
+            "DateOfBirth" : {
+              "type" : "string"
+            },
+            "PolicyNumber" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            }
+          }
+        },
+        "Client" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "Representative" : {
+              "type" : "object",
+              "properties" : {
+                "FirstName" : {
+                  "type" : "string"
+                },
+                "Surname" : {
+                  "type" : "string"
+                },
+                "ContactNumber" : {
+                  "type" : "string"
+                },
+                "EmailAddress" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "CustomerLiaison" : {
+          "type" : "object",
+          "properties" : {
+            "HierarchyDescription" : {
+              "type" : "string"
+            },
+            "ContactNumber" : {
+              "type" : "string"
+            },
+            "Representative" : {
+              "type" : "object",
+              "properties" : {
+                "FirstName" : {
+                  "type" : "string"
+                },
+                "Surname" : {
+                  "type" : "string"
+                },
+                "ContactNumber" : {
+                  "type" : "string"
+                },
+                "EmailAddress" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "MedicalAid" : {
+          "type" : "object",
+          "properties" : {
+            "Company" : {
+              "type" : "string"
+            },
+            "Plan" : {
+              "type" : "string"
+            },
+            "MembershipNumber" : {
+              "type" : "string"
+            },
+            "MedicalConditions" : {
+              "type" : "string"
+            }
+          }
+        },
+        "drivable" : {
+          "type" : "string"
+        },
+        "serviceProviders" : {
+          "type" : "array",
+          "items" : {
+            "type" : "object",
+            "properties" : {
+              "serviceProviderName" : {
+                "type" : "string"
+              },
+              "services" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "serviceId" : {
+                      "type" : "string"
+                    },
+                    "reference" : {
+                      "type" : "string"
+                    },
+                    "serviceType" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "string"
+                        },
+                        "value" : {
+                          "type" : "string"
+                        }
+                      }
+                    },
+                    "serviceSubType" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "string"
+                        },
+                        "value" : {
+                          "type" : "string"
+                        }
+                      }
+                    },
+                    "creatorId" : {
+                      "type" : "string"
+                    },
+                    "instruction" : {
+                      "type" : "string"
+                    },
+                    "isServiceProviderOnScene" : {
+                      "type" : "string"
+                    },
+                    "locationDetails" : {
+                      "type" : "object",
+                      "properties" : {
+                        "requestLocation" : {
+                          "type" : "object",
+                          "properties" : {
+                            "extraLocationInformation" : {
+                              "type" : "string"
+                            },
+                            "lat" : {
+                              "type" : "string"
+                            },
+                            "lon" : {
+                              "type" : "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "OperationId" : {
+          "type" : "string"
+        },
+        "DateOfOperationTrigger" : {
+          "type" : "string"
+        }
+      }
+    },
+    "caseInfoRequest" : {
+      "type" : "object",
+      "properties" : {
+        "caseInfo" : {
+          "type" : "object",
+          "properties" : {
+            "Id" : {
+              "type" : "string"
+            },
+            "caseId" : {
+              "type" : "string"
+            },
+            "digitalCaseId" : {
+              "type" : "string"
+            },
+            "serviceProviders" : {
+              "type" : "array",
+              "items" : {
+                "type" : "object",
+                "properties" : {
+                  "serviceProviderName" : {
+                    "type" : "string"
+                  },
+                  "caseId" : {
+                    "type" : "string"
+                  },
+                  "services" : {
+                    "type" : "array",
+                    "items" : {
+                      "$ref" : "#/definitions/servicesInfo"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "servicesInfo" : {
+      "type" : "object",
+      "properties" : {
+        "serviceId" : {
+          "type" : "string"
+        },
+        "imsServiceId" : {
+          "type" : "string"
+        },
+        "digitalServiceId" : {
+          "type" : "string"
+        },
+        "reference" : {
+          "type" : "string"
+        },
+        "status" : {
+          "type" : "string"
+        }
+      }
+    },
+    "deleteIncident" : {
+      "type" : "object",
+      "properties" : {
+        "caseInfo" : {
+          "type" : "object",
+          "properties" : {
+            "caseId" : {
+              "type" : "string"
+            },
+            "imsCaseId" : {
+              "type" : "string"
+            },
+            "serviceProviders" : {
+              "type" : "array",
+              "items" : {
+                "type" : "object",
+                "properties" : {
+                  "serviceProviderName" : {
+                    "type" : "string"
+                  },
+                  "caseId" : {
+                    "type" : "string"
+                  },
+                  "services" : {
+                    "type" : "array",
+                    "items" : {
+                      "type" : "object",
+                      "properties" : {
+                        "serviceId" : {
+                          "type" : "string"
+                        },
+                        "imsServiceId" : {
+                          "type" : "string"
+                        },
+                        "reference" : {
+                          "type" : "string"
+                        },
+                        "cancellationReason" : {
+                          "type" : "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "createService" : {
+      "type" : "object",
+      "properties" : {
+        "policy" : {
+          "type" : "object",
+          "properties" : {
+            "policyNumber" : {
+              "type" : "string"
+            },
+            "imsId" : {
+              "type" : "string"
+            },
+            "imscaseId" : {
+              "type" : "string"
+            },
+            "incidentDate" : {
+              "type" : "string"
+            },
+            "imsServiceId" : {
+              "type" : "string"
+            }
+          }
+        },
+        "person" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/person"
+          }
+        },
+        "vehicles" : {
+          "type" : "object",
+          "properties" : {
+            "year" : {
+              "type" : "string"
+            },
+            "make" : {
+              "type" : "string"
+            },
+            "model" : {
+              "type" : "string"
+            },
+            "registrationNumber" : {
+              "type" : "string"
+            },
+            "colour" : {
+              "type" : "string"
+            }
+          }
+        },
+        "serviceProviders" : {
+          "type" : "object",
+          "properties" : {
+            "serviceProviderName" : {
+              "type" : "string"
+            },
+            "caseId" : {
+              "type" : "string"
+            },
+            "caseReference" : {
+              "type" : "string"
+            },
+            "services" : {
+              "type" : "object",
+              "properties" : {
+                "serviceType" : {
+                  "type" : "object",
+                  "properties" : {
+                    "key" : {
+                      "type" : "string"
+                    },
+                    "value" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "serviceSubType" : {
+                  "type" : "object",
+                  "properties" : {
+                    "key" : {
+                      "type" : "string"
+                    },
+                    "value" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "creatorId" : {
+                  "type" : "string"
+                },
+                "instruction" : {
+                  "type" : "string"
+                },
+                "isServiceProviderOnScene" : {
+                  "type" : "string"
+                },
+                "locationDetails" : {
+                  "type" : "object",
+                  "properties" : {
+                    "requestLocation" : {
+                      "type" : "object",
+                      "properties" : {
+                        "extraLocationInformation" : {
+                          "type" : "string"
+                        },
+                        "lat" : {
+                          "type" : "string"
+                        },
+                        "lon" : {
+                          "type" : "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "deleteAssistanceRequest" : {
+      "type" : "object",
+      "properties" : {
+        "caseInfo" : {
+          "type" : "object",
+          "properties" : {
+            "caseId" : {
+              "type" : "string"
+            },
+            "serviceProviders" : {
+              "type" : "object",
+              "properties" : {
+                "serviceProviderName" : {
+                  "type" : "string"
+                },
+                "caseId" : {
+                  "type" : "string"
+                },
+                "services" : {
+                  "type" : "object",
+                  "properties" : {
+                    "serviceId" : {
+                      "type" : "string"
+                    },
+                    "imsServiceId" : {
+                      "type" : "string"
+                    },
+                    "reference" : {
+                      "type" : "string"
+                    },
+                    "cancellationReason" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

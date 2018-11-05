@@ -1,0 +1,67 @@
+
+
+BROKER SCHEMA validation
+
+
+
+CREATE COMPUTE MODULE validateRequest
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+		SET Environment.Variables.isConsumable = TRUE;
+		IF InputLocalEnvironment.REST.Input.Method IN('GET','DELETE') THEN
+			SET OutputRoot = InputRoot;
+			RETURN TRUE;
+		ELSE
+			DECLARE refPath REFERENCE TO InputLocalEnvironment.REST.Input;
+			DECLARE OpeartionId CHARACTER InputLocalEnvironment.REST.Input.Operation;
+			IF refPath.Method = 'DELETE' THEN
+				SET OutputRoot.XMLNSC.{OpeartionId} = refPath.Parameters;
+			ELSE
+				SET OutputRoot.XMLNSC.{OpeartionId} = InputRoot.JSON.Data;
+			END IF;
+
+			DECLARE msgref REFERENCE TO OutputRoot.XMLNSC;
+			DECLARE cdmResult BOOLEAN;
+			DECLARE enCODE,ccSID INTEGER;
+			SET enCODE = 546;
+			SET ccSID = InputRoot.Properties.CodedCharSetId;
+			CALL SchemaValidate(msgref, enCODE, ccSID,OpeartionId) INTO cdmResult;
+			IF cdmResult THEN
+				SET OutputRoot =NULL;
+			END IF;
+			SET OutputRoot = InputRoot;
+			RETURN TRUE;
+		END IF;
+	END;
+END MODULE;
+CREATE PROCEDURE SchemaValidate(IN msgref REFERENCE, IN enCODE INTEGER, IN ccSID INTEGER,IN operation CHARACTER) Returns BOOLEAN Language ESQL
+BEGIN
+	DECLARE tmprow ROW;
+	DECLARE refRSBlob BLOB;
+	DECLARE cdmRef CHARACTER;
+	SET refRSBlob = ASBITSTREAM(msgref CCSID ccSID);
+	CREATE LASTCHILD OF tmprow FROM msgref;
+	DECLARE options INTEGER BITOR(ValidateException, ValidateContent, ValidateComplete);
+	CREATE LASTCHILD OF tmprow DOMAIN('XMLNSC')
+	PARSE(refRSBlob, enCODE, ccSID, 'msAssistance',operation,,options);
+	RETURN TRUE;
+END;
+
+
+CREATE PROCEDURE setBadRequestResponse400(IN outRef REFERENCE)
+BEGIN
+	SET outRef.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 400 Bad Request';
+	SET outRef.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 400;
+
+END;
+
+
+
+
+CREATE PROCEDURE setBadRequestResponse204(IN outRef REFERENCE)
+BEGIN
+	SET outRef.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 204 No Content';
+	SET outRef.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 204;
+
+END;

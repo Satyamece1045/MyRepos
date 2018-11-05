@@ -1,0 +1,103 @@
+CREATE COMPUTE MODULE getToken
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE inputRef REFERENCE TO InputRoot.JSON.Data;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		IF CURRENT_TIMESTAMP <= inputRef.SignInUserResponse.TokenExpiry THEN
+			SET OutputRoot = InputRoot;
+			SET Environment.Variables.newToken= inputRef.SignInUserResponse.AccessToken;
+		ELSE
+			SET envRef.isCached = False;
+			RETURN FALSE;
+		END IF;
+
+
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+CREATE COMPUTE MODULE caseRequest
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		DECLARE inputRef REFERENCE TO Environment.Variables.orgMessage;
+		DECLARE inRef REFERENCE TO InputRoot.JSON.Data;
+		SET Environment.Variables.cache = inRef;
+		SET Environment.Variables.serviceURL = inRef.serviceURL;
+		SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/json';
+		SET OutputRoot.HTTPRequestHeader."correlationId" = Environment.Variables.correlationId;
+		SET OutputRoot.HTTPRequestHeader."source" = Environment.Variables.requestHeader.source;
+		SET OutputRoot.HTTPRequestHeader.Authorization = 'Bearer ' || Environment.Variables.newToken;
+		SET OutputLocalEnvironment.Destination.HTTP.RequestURL = Environment.Variables.serviceURL.crtCase;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY(JSON.Object);
+		DECLARE outRef REFERENCE TO OutputRoot.JSON.Data;
+
+		SET outRef.policy= inputRef.policy;
+		SET outRef.person= inputRef.person;
+		SET outRef.vehicles= inputRef.vehicles;
+		SET outRef.serviceProviders.services.serviceProviderName= inputRef.serviceProviders.serviceProviderName;
+		SET outRef.serviceProviders.services.externalServiceId= inputRef.serviceProviders.services.externalServiceId;
+		SET outRef.serviceProviders.clientId= inRef.clientId;
+		
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+
+CREATE COMPUTE MODULE assistanceRequest
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		DECLARE inputRef REFERENCE TO Environment.Variables.orgMessage;
+		DECLARE inRef REFERENCE TO InputRoot.JSON.Data;
+		SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/json';
+		SET OutputRoot.HTTPRequestHeader."correlationId" = Environment.Variables.correlationId;
+		SET OutputRoot.HTTPRequestHeader."source" = Environment.Variables.requestHeader.source;
+		SET OutputRoot.HTTPRequestHeader.Authorization = 'Bearer ' || Environment.Variables.cache.SignInUserResponse.AccessToken;
+		SET OutputLocalEnvironment.Destination.HTTP.RequestURL = Environment.Variables.serviceURL.crtAssistance||InputRoot.JSON.Data.caseInfo.serviceProviders.id;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY(JSON.Object);
+		DECLARE outRef REFERENCE TO OutputRoot.JSON.Data;
+		CREATE FIELD outRef.serviceProviders IDENTITY(JSON.Object);
+		DECLARE ddetails REFERENCE TO outRef.serviceProviders;
+		
+		SET ddetails= inputRef.serviceProviders;
+		SET ddetails.caseId = inRef.caseInfo.serviceProviders.id;
+		SET ddetails.caseReference = inRef.caseInfo.serviceProviders.reference;
+		SET outRef.policy.imsId = inputRef.policy.imsId;
+		SET outRef.policy.imscaseId = inputRef.policy.imscaseId;
+		SET outRef.policy.imsServiceId = inputRef.policy.imsServiceId;
+		SET outRef.policy.sourceSystem = inputRef.policy.sourceSystem;
+		SET outRef.policy.externalCaseId = inputRef.policy.externalCaseId;
+		SET outRef.policy.externalServiceId = inputRef.policy.externalServiceId;
+
+		FOR personRef AS inputRef.person.Item[] DO
+			IF personRef.isIMSCustomer = true THEN
+				SET outRef.person.firstName= personRef.firstName;
+				SET outRef.person.lastName= personRef.lastName;
+				SET outRef.person.contactDetail.emailAddress= personRef.contactDetail.emailAddress;
+				SET outRef.person.contactDetail.contactNumber= personRef.contactDetail.contactNumber;
+			END IF;
+		END FOR;
+
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+
+
+CREATE COMPUTE MODULE setNewToken
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.newToken = InputRoot.JSON.Data.AccessToken;
+
+		RETURN TRUE;
+	END;
+
+END MODULE;

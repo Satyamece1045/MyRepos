@@ -1,0 +1,44 @@
+CREATE COMPUTE MODULE createAssistance_Request
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE inputRef REFERENCE TO Environment.Variables.orgMessage;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		DECLARE serviceProviderDetails REFERENCE TO inputRef.serviceProviders;
+		DECLARE dlocation REFERENCE TO serviceProviderDetails.services.locationDetails.requestLocation;
+		SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/json';
+		SET OutputRoot.HTTPRequestHeader.Authorization = Environment.Variables.auth;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY(JSON.Object);
+		DECLARE outRef REFERENCE TO OutputRoot.JSON.Data;
+
+		SET Environment.variables.imsServiceType = serviceProviderDetails.services.serviceType.key||'-'||serviceProviderDetails.services.serviceSubType.key;
+		SET OutputLocalEnvironment.Destination.HTTP.RequestURL = InputRoot.JSON.Data.serviceURL.assistanceUrl.{Environment.variables.imsServiceType};
+		
+
+		SET outRef.CaseId= Environment.Variables.params.caseId;
+		SET outRef.CaseServiceDefinitionId= InputRoot.JSON.Data.caseServiceDefinition.{Environment.variables.imsServiceType};
+		SET outRef.CreatorId= serviceProviderDetails.services.creatorId;
+
+
+		SET outRef.RequestLocation.ExtraLocationInformation= dlocation.extraLocationInformation;
+		SET outRef.RequestLocation.Lat= dlocation.lat;
+		SET outRef.RequestLocation.Lon= dlocation.lon;
+
+		SET outRef.RequestContactPerson.FirstName= inputRef.person.firstName;
+		SET outRef.RequestContactPerson.Surname= inputRef.person.lastName;
+		SET outRef.RequestContactPerson.ContactNumber= inputRef.person.contactDetail.contactNumber;
+		SET outRef.RequestContactPerson.ContactEmail= inputRef.person.contactDetail.emailAddress;
+
+		SET outRef.IsServiceProviderOnScene= serviceProviderDetails.services.isServiceProviderOnScene;
+
+		SET outRef.CallId= inputRef.policy.imsServiceId;
+		SET outRef.Instruction= serviceProviderDetails.services.instruction;
+		SET outRef.ExternalCaseServiceId= inputRef.policy.imsServiceId;
+		SET Environment.Variables.caseId = serviceProviderDetails.caseId;
+		SET Environment.Variables.policyDetails = inputRef.policy;
+		--saving request payload
+		PROPAGATE TO TERMINAL 'out1' FINALIZE NONE DELETE NONE;
+		RETURN TRUE;
+	END;
+
+
+END MODULE;

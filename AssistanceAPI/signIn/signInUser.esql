@@ -1,0 +1,59 @@
+
+BROKER SCHEMA signIn
+
+CREATE COMPUTE MODULE set_AccessToken
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.InputData = InputRoot.JSON.Data;
+		SET Environment.Variables.gcKeyName = 'SignInUserResponse';
+		PROPAGATE TO TERMINAL 'out2';
+
+		DECLARE isTokenExpired BOOLEAN FALSE;
+		DECLARE accessToken CHARACTER;
+		DECLARE tokenExpiryInt INTEGER;
+		DECLARE currentTimeInt INTEGER;
+
+		IF Environment.gcData.SignInUserResponse.TokenExpiry IS NOT NULL THEN
+			SET accessToken = Environment.gcData.SignInUserResponse.AccessToken;
+			DECLARE tokenExpiry GMTTIMESTAMP CAST(Environment.gcData.SignInUserResponse.TokenExpiry AS TIMESTAMP FORMAT 'I');
+			SET tokenExpiryInt = CAST(tokenExpiry AS CHARACTER FORMAT 'yyyyMMddHHmmssSSS');
+			SET currentTimeInt = CAST(CURRENT_GMTTIMESTAMP AS CHARACTER FORMAT 'yyyyMMddHHmmssSSS');
+		END IF;
+		IF accessToken IS NULL OR currentTimeInt > tokenExpiryInt THEN
+			SET isTokenExpired = TRUE;
+		END IF;
+
+		IF isTokenExpired THEN
+			SET Environment.Variables.gcKeyName = Environment.Variables.requestHeader.source;
+			PROPAGATE TO TERMINAL 'out3';
+
+			DECLARE dataRef REFERENCE TO Environment.gcData.{Environment.Variables.requestHeader.source};
+
+			SET OutputRoot.JSON.Data = dataRef.SignInRequest;
+			SET Environment.Variables.gcKeyName = 'SignInResponse';
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = dataRef.serviceURL.signIn;
+			PROPAGATE TO TERMINAL 'out1';
+
+			SET OutputRoot.HTTPRequestHeader.Authorization = 'Bearer ' || Environment.gcData.SignInResponse.AccessToken;
+			SET OutputRoot.JSON.Data = dataRef.SignInUserRequest;
+			SET Environment.Variables.gcKeyName = 'SignInUserResponse';
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = dataRef.serviceURL.signInUser;
+			PROPAGATE TO TERMINAL 'out1';
+
+			SET accessToken = Environment.gcData.SignInUserResponse.AccessToken;
+		END IF;
+
+		SET OutputRoot.HTTPRequestHeader.Authorization = 'Bearer ' || accessToken;
+		SET OutputRoot.JSON.Data = Environment.InputData;
+		SET Environment.gcData = NULL;
+		RETURN TRUE;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE storeToEnvironment
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.gcData.{Environment.Variables.gcKeyName} = InputRoot.JSON.Data;
+		RETURN TRUE;
+	END;
+END MODULE;

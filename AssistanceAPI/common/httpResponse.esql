@@ -1,0 +1,268 @@
+BROKER SCHEMA common
+
+
+CREATE COMPUTE MODULE httpResponse
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE inputRespHeader REFERENCE TO InputRoot.HTTPResponseHeader;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY(JSON.Object);
+		DECLARE inputRef REFERENCE TO InputRoot.JSON.Data;
+		DECLARE outRef REFERENCE TO OutputRoot.JSON.Data;
+		DECLARE caseInfo REFERENCE TO outRef.caseInfo;
+		DECLARE dtRef REFERENCE TO Environment.InputData.payload.serviceProviders;		
+		SET OutputLocalEnvironment.REST.Input.Operation = Environment.Variables.OPERATION;
+		IF inputRespHeader."X-Original-HTTP-Status-Code" = 200 THEN
+
+			SET outRef.caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET outRef.caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET outRef.caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+
+			IF Environment.Variables.OPERATION = 'createCase' THEN
+				SET outRef.caseInfo.serviceProviders.serviceProviderName = dtRef.serviceProviderName;
+				SET outRef.caseInfo.serviceProviders.id = inputRef.CaseId;
+				SET outRef.caseInfo.serviceProviders.reference = inputRef.CaseReference;
+
+			ELSEIF Environment.Variables.OPERATION = 'createAssistance' THEN
+				SET outRef.caseInfo.serviceProviders.serviceProviderName = dtRef.serviceProviderName;
+				SET outRef.caseInfo.serviceProviders.id = dtRef.caseId;
+				SET outRef.caseInfo.serviceProviders.caseReference = dtRef.caseReference;
+				SET outRef.caseInfo.serviceProviders.serviceId = inputRef.ServiceId;
+				SET outRef.caseInfo.serviceProviders.reference = inputRef.Reference;
+				SET Environment.Variables.policyDetails = Environment.InputData.payload.policy;				
+			END IF;
+
+
+			If inputRef.WasSuccessful= TRUE THEN
+				SET outRef.caseInfo.serviceProviders.status= 'Success';
+			ELSE
+				SET outRef.caseInfo.serviceProviders.status= 'Failed';
+				SET outRef.error.code= '400';
+				SET outRef.error.message= inputRef.ErrorMessage;
+				SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+				SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+				SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+				SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+				SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+				SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+				SET caseInfo.statusCode = 400;
+				SET caseInfo.errorMessage = inputRef.ErrorMessage;
+				SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			END IF;
+			SET Environment.Variables.caseInfo= outRef;
+			SET caseInfo.header.correlationId = Environment.Variables.params.correlationId;
+
+			SET OutputRoot.HTTPResponseHeader."X-publishUTC" = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-businessSystem" = SQL.MessageFlowLabel;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 202 Accepted';
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 202;
+			SET OutputLocalEnvironment.Destination.HTTP.RequestIdentifier = CAST(envRef.messageId AS BLOB);
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 409 OR inputRespHeader."X-Original-HTTP-Status-Code" = 401 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";			
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 401;
+			SET caseInfo.errorMessage = CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+			
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 400 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 400;
+			SET caseInfo.errorMessage = 'Bad Request. The request contained an error.';
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			PROPAGATE TO TERMINAL 'out'  FINALIZE NONE DELETE NONE;
+			
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 403 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 403;
+			SET caseInfo.errorMessage = 'Forbidden. The request is for something forbidden. Authorization will not help.'||CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+				
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 404 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 404;
+			SET caseInfo.errorMessage = 'Not Found. The requested resource was not found.'||CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			SET Environment.Variables.requestHeader.correlationId = Environment.Variables.params.correlationId;
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+			
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 429 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 429;
+			SET caseInfo.errorMessage = 'Too Many Requests. The user has sent too many requests in a given amount of time. The account is being rate limited.'||CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			SET Environment.Variables.requestHeader.correlationId = Environment.Variables.params.correlationId;
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+			
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 500 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 500;
+			SET caseInfo.errorMessage = 'Internal Server Error. Your request could not be completed because there was a problem with the service.'||CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			SET Environment.Variables.requestHeader.correlationId = Environment.Variables.params.correlationId;
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+			
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 503 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 503;
+			SET caseInfo.errorMessage = 'Service Unavailable. There is a problem with the service right now. Please try again later.'||CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			SET Environment.Variables.requestHeader.correlationId = Environment.Variables.params.correlationId;
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+			
+		ELSEIF inputRespHeader."X-Original-HTTP-Status-Code" = 504 THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = 504;
+			SET caseInfo.errorMessage = 'Gateway Timeout.'||CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			SET Environment.Variables.requestHeader.correlationId = Environment.Variables.params.correlationId;
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;					
+
+		ELSE
+			SET OutputRoot.HTTPResponseHeader.correlationId = envRef.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = inputRespHeader."X-Original-HTTP-Status-Line";
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.imsId= Environment.Variables.policyDetails.imsId;
+			SET caseInfo.imscaseId= Environment.Variables.policyDetails.imscaseId;
+			SET caseInfo.imsServiceId= Environment.Variables.policyDetails.imsServiceId;
+			SET caseInfo.sourceSystem = Environment.Variables.policyDetails.sourceSystem;
+			SET caseInfo.externalId = Environment.Variables.policyDetails.externalCaseId;
+			SET caseInfo.externalServiceId = dtRef.services.externalServiceId;
+			SET caseInfo.statusCode = inputRespHeader."X-Original-HTTP-Status-Code";
+			SET caseInfo.errorMessage = CAST(InputRoot.BLOB.BLOB AS CHARACTER CCSID 437 Encoding 546);
+			SET caseInfo.serviceType = Environment.Variables.OPERATION;
+			SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+			SET Environment.Variables.caseInfo= outRef;
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			SET Environment.Variables.eventState = 'PROCESSED';
+			SET Environment.Variables.requestHeader.correlationId = Environment.Variables.params.correlationId;
+			PROPAGATE TO TERMINAL 'out' FINALIZE NONE DELETE NONE;
+
+		END IF;
+
+		
+		SET OutputRoot.JSON.Data = Environment.Variables.caseInfo;
+		SET Environment.Variables.gcKeyName = NULL;
+		SET OutputRoot.HTTPInputHeader = InputRoot.HTTPResponseHeader;
+		SET OutputLocalEnvironment.REST.Input.Operation = Environment.Variables.OPERATION;
+		SET OutputLocalEnvironment.correlationId = Environment.Variables.params.correlationId;
+		PROPAGATE TO TERMINAL 'out1' FINALIZE NONE DELETE NONE ;
+		
+		SET Environment.Variables.eventState = 'COMPLETED';
+		SET Environment.Variables.correlationId = Environment.Variables.params.correlationId;
+		SET Environment.Variables.processName = Environment.Variables.OPERATION;
+		PROPAGATE TO TERMINAL 'out2';
+
+		RETURN FALSE;
+		
+	END;
+END MODULE;

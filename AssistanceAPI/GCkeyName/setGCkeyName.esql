@@ -1,0 +1,23 @@
+BROKER SCHEMA GCkeyName
+
+
+CREATE COMPUTE MODULE setGCkeyName
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.gcKeyName = Environment.Variables.requestHeader.source;
+		SET Environment.Variables.orgMessage = InputRoot.JSON.Data.payload;
+		SET Environment.Variables.auth = InputRoot.HTTPRequestHeader.Authorization;
+
+	END;
+END MODULE;
+
+
+CREATE COMPUTE MODULE setGCkeyName_DT
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.gcKeyName = Environment.Variables.requestHeader.source;
+		SET Environment.Variables.orgMessage = InputRoot.JSON.Data.payload;
+
+
+	END;
+END MODULE;

@@ -1,0 +1,60 @@
+CREATE COMPUTE MODULE createCase_Request
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE inRef REFERENCE TO InputRoot.JSON.Data;
+		DECLARE inputRef REFERENCE TO Environment.Variables.orgMessage;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		DECLARE serviceProviders REFERENCE TO inputRef.serviceProviders;
+		SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/json';
+		SET OutputRoot.HTTPRequestHeader.Authorization = Environment.Variables.auth;
+		SET OutputLocalEnvironment.Destination.HTTP.RequestURL = inRef.serviceURL.dreamtecCaseUrl;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY(JSON.Object);
+		DECLARE outRef REFERENCE TO OutputRoot.JSON.Data;
+
+
+		SET outRef.OperationsNodeId= serviceProviders.clientId.operationsNodeId;
+		SET outRef.ClientNodeId= serviceProviders.clientId.clientNodeId;
+		SET outRef.CreatorNodeId= serviceProviders.clientId.creatorNodeId;
+
+		FOR person AS inputRef.person.Item[] DO
+			IF person.isIMSCustomer = true THEN
+				SET outRef.Customer.FirstName= person.firstName;
+				SET outRef.Customer.Surname= person.lastName;
+				SET outRef.Customer.ContactNumber= person.contactDetail.contactNumber;
+				SET outRef.Customer.IDNumber= person.identification.idNumber;
+				SET outRef.Customer.IsPolicyHolder= true;
+			END IF;
+		END FOR;
+
+		SET outRef.Vehicle.LicensePlateNumber= inputRef.vehicles.registrationNumber;
+		SET outRef.Vehicle.Make= inputRef.vehicles.make;
+		SET outRef.Vehicle.Model= inputRef.vehicles.model;
+		SET outRef.Vehicle.Year= inputRef.vehicles.year;
+		SET outRef.Vehicle.Color= inputRef.vehicles.colour;
+
+
+		FOR owner AS inputRef.person.Item[] DO
+			IF UPPER(owner.role) = 'OWNER' THEN
+				SET outRef.Account.CompanyName= inRef.staticData.companyName;
+				SET outRef.Account.FirstName= owner.firstName;
+				SET outRef.Account.Surname= owner.lastName;
+				SET outRef.Account.IDNumber= owner.identification.idNumber;
+				SET outRef.Account.DateOfBirth= owner.dateOfBirth;
+				SET outRef.Account.ContactNumber= owner.contactDetail.contactNumber;
+				SET outRef.Account.ClientId= serviceProviders.clientId.clientNodeId;
+				SET outRef.Account.PolicyNumber= inputRef.policy.policyNumber;
+			END IF;
+		END FOR;
+
+		SET outRef.ExternalClaimReference= inputRef.policy.imscaseId;
+		SET outRef.ExternalCaseId= inputRef.policy.imscaseId;
+		SET outRef.DateOfIncident= inputRef.policy.incidentDate;
+
+		SET Environment.Variables.policyDetails = inputRef.policy;
+		--saving request payload
+		PROPAGATE TO TERMINAL 'out1' FINALIZE NONE DELETE NONE;
+		RETURN TRUE;
+	END;
+
+
+END MODULE;

@@ -1,0 +1,38 @@
+BROKER SCHEMA common
+
+
+CREATE COMPUTE MODULE eventlogging
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		SET Environment.Variables.eventState = 'INVOKED';
+		SET Environment.Variables.correlationId = InputLocalEnvironment.REST.Input.Parameters.correlationId;
+		SET Environment.Variables.processName = InputLocalEnvironment.REST.Input.Operation;
+		PROPAGATE TO TERMINAL 'out1' FINALIZE NONE DELETE NONE;
+		RETURN TRUE;
+		
+	END;
+
+	
+END MODULE;
+
+
+CREATE COMPUTE MODULE processedEvent
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.eventState = 'PUBLISHED';
+		SET Environment.Variables.correlationId = Environment.Variables.params.correlationId;
+		SET Environment.Variables.processName = Environment.Variables.OPERATION;
+		RETURN TRUE;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE completeEvent
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.eventState = 'COMPLETED';
+		SET Environment.Variables.correlationId = Environment.Variables.params.correlationId;
+		SET Environment.Variables.processName = Environment.Variables.OPERATION;
+		RETURN TRUE;
+	END;
+END MODULE;

@@ -1,0 +1,16 @@
+BROKER SCHEMA common
+
+CREATE COMPUTE MODULE Response_Map
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE To OutputRoot.JSON.Data;		
+		SET outputRef.wasSuccessful = TRUE;
+		SET outputRef.errorMessage = '';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 202 Accepted';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 202;
+		
+		
+		RETURN TRUE;
+	END;
+END MODULE;
