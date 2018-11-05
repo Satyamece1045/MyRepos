@@ -1,0 +1,10 @@
+BROKER SCHEMA commonFlows
+
+CREATE COMPUTE MODULE setSystemName
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.gcKeyName = 'ENCENTIVIZE';
+		RETURN TRUE;
+	END;
+
+END MODULE;

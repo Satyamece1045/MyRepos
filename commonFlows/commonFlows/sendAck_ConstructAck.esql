@@ -1,0 +1,25 @@
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE sendAck_ConstructAck
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		--Constructing the XML declaration
+		CREATE FIRSTCHILD OF OutputRoot.XMLNSC TYPE XMLNSC.XmlDeclaration NAME 'XmlDeclaration';
+		SET OutputRoot.XMLNSC.(XMLNSC.XmlDeclaration)*.(XMLNSC.Attribute)Version = '1.0';
+		SET OutputRoot.XMLNSC.(XMLNSC.XmlDeclaration)*.(XMLNSC.Attribute)Encoding = 'UTF-8';
+		CREATE FIELD OutputRoot.XMLNSC.responseHeader Type Name;
+		DECLARE outputRef REFERENCE TO OutputRoot.XMLNSC.responseHeader;
+		DECLARE headerRef REFERENCE TO Environment.Variables.requestHeader;
+		DECLARE messageIdRef REFERENCE TO Environment.Variables.messageId;
+		SET outputRef.correlationId = messageIdRef;
+		SET outputRef.messageId = messageIdRef;		
+		SET outputRef.messageType = headerRef.messageType;
+		SET outputRef.publishUTC = CURRENT_TIMESTAMP;
+		SET outputRef.businessSystem = SQL.MessageFlowLabel;
+		SET outputRef.messageResponse.code = '0000';
+		SET outputRef.messageResponse.message = 'SUCCESS';
+		PROPAGATE TO TERMINAL 'out' DELETE NONE;
+		RETURN FALSE;
+	END;
+END MODULE;

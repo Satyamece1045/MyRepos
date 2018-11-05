@@ -1,0 +1,16 @@
+/*$mqsi databaseWrapper.subflow_ESQL_VERSION = 1 MQSI$
+v1 Samba Raju Golusula November 21, 2016 - Base version
+v2 Samba Raju Golusula December 06, 2016 - Updated version
+*/
+BROKER SCHEMA common.database
+
+CREATE COMPUTE MODULE databaseWrapper_setGCKeyName
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CREATE FIELD Environment.Variables Type Name;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		SET envRef.DBInputData = InputRoot;
+        SET envRef.gcKeyName = SQL.MessageFlowLabel;
+		RETURN TRUE;
+	END;
+END MODULE;

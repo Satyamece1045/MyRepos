@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:ComIbmCompute.msgnode="ComIbmCompute.msgnode" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmlns:eflow="http://www.ibm.com/wbi/2005/eflow" xmlns:utility="http://www.ibm.com/wbi/2005/eflow_utility" nsURI="commonFlows/validateHTTPHeaders.subflow" nsPrefix="commonFlows_validateHTTPHeaders.subflow">
+  <eClassifiers xmi:type="eflow:FCMComposite" name="FCMComposite_1" useDefaults="true" udpSupport="true">
+    <eSuperTypes href="http://www.ibm.com/wbi/2005/eflow#//FCMBlock"/>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.TRUSTPATH" name="TRUSTPATH" lowerBound="1" defaultValueLiteral="C:\BrokerSSL\APIDEV\isservicestruststore.co.za.jks">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.PASSWORD" name="PASSWORD" lowerBound="1" defaultValueLiteral="password">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.ISSUER" name="ISSUER" lowerBound="1" defaultValueLiteral="https://esbopendev.isservices.co.za">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <translation xmi:type="utility:TranslatableString" key="validateHTTPHeaders" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+    <colorGraphic16 xmi:type="utility:GIFFileGraphic" resourceName="platform:/plugin/commonFlows/icons/full/obj16/validateHTTPHeaders.gif"/>
+    <colorGraphic32 xmi:type="utility:GIFFileGraphic" resourceName="platform:/plugin/commonFlows/icons/full/obj30/validateHTTPHeaders.gif"/>
+    <composition>
+      <nodes xmi:type="eflow:FCMSource" xmi:id="InTerminal.Input" location="10,20">
+        <translation xmi:type="utility:TranslatableString" key="InTerminal.Input" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+      </nodes>
+      <nodes xmi:type="eflow:FCMSink" xmi:id="OutTerminal.Output" location="258,20">
+        <translation xmi:type="utility:TranslatableString" key="OutTerminal.inValid" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+      </nodes>
+      <nodes xmi:type="ComIbmCompute.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_1" location="93,20" computeExpression="esql://routine/commonFlows#ValidateHTTPHeaders.Main">
+        <translation xmi:type="utility:ConstantString" string="ValidateHTTPHeaders"/>
+      </nodes>
+      <nodes xmi:type="eflow:FCMSink" xmi:id="OutTerminal.Output1" location="258,101">
+        <translation xmi:type="utility:TranslatableString" key="OutTerminal.Valid" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+      </nodes>
+      <nodes xmi:type="eflow:FCMSink" xmi:id="OutTerminal.Output2" location="247,182">
+        <translation xmi:type="utility:TranslatableString" key="OutTerminal.ActivateUser" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+      </nodes>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_1" targetNode="FCMComposite_1_1" sourceNode="InTerminal.Input" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_2" targetNode="OutTerminal.Output" sourceNode="FCMComposite_1_1" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_3" targetNode="OutTerminal.Output1" sourceNode="FCMComposite_1_1" sourceTerminalName="OutTerminal.out1" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_4" targetNode="OutTerminal.Output2" sourceNode="FCMComposite_1_1" sourceTerminalName="OutTerminal.out2" targetTerminalName="InTerminal.in"/>
+    </composition>
+    <propertyOrganizer>
+      <propertyDescriptor groupName="Group.TOKENAUTH" configurable="true" userDefined="true" describedAttribute="Property.TRUSTPATH">
+        <propertyName xmi:type="utility:TranslatableString" key="Property.TRUSTPATH" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+        <propertyDescriptor groupName="Group.TOKENAUTH" configurable="true" userDefined="true" describedAttribute="Property.PASSWORD">
+          <propertyName xmi:type="utility:TranslatableString" key="Property.PASSWORD" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+          <propertyDescriptor groupName="Group.TOKENAUTH" configurable="true" userDefined="true" describedAttribute="Property.ISSUER">
+            <propertyName xmi:type="utility:TranslatableString" key="Property.ISSUER" bundleName="commonFlows/validateHTTPHeaders" pluginId="commonFlows"/>
+          </propertyDescriptor>
+        </propertyDescriptor>
+      </propertyDescriptor>
+    </propertyOrganizer>
+    <stickyBoard/>
+  </eClassifiers>
+</ecore:EPackage>

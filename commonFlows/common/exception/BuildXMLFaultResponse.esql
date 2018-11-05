@@ -1,0 +1,32 @@
+BROKER SCHEMA common.exception
+
+
+CREATE COMPUTE MODULE BuildXMLFaultResponse
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		--Constructing the XML declaration
+		CREATE FIRSTCHILD OF OutputRoot.XMLNSC TYPE XMLNSC.XmlDeclaration NAME 'XmlDeclaration';
+		SET OutputRoot.XMLNSC.(XMLNSC.XmlDeclaration)*.(XMLNSC.Attribute)Version = '1.0';
+		SET OutputRoot.XMLNSC.(XMLNSC.XmlDeclaration)*.(XMLNSC.Attribute)Encoding = 'UTF-8';
+		CREATE FIELD OutputRoot.XMLNSC.responseHeader Type Name;
+		DECLARE outputRef REFERENCE TO OutputRoot.XMLNSC.responseHeader;
+		DECLARE messageIdRef REFERENCE TO Environment.Variables.DBInputData.JSON.Data.header.MQHeaders.MessageId;
+		SET outputRef.correlationId = messageIdRef;
+		SET outputRef.messageId = messageIdRef;
+		SET outputRef.messageType = COALESCE(outputRef.messageType, '');
+		SET outputRef.publishUTC = CURRENT_TIMESTAMP;
+		SET outputRef.businessSystem = SQL.MessageFlowLabel;
+		SET outputRef.messageResponse.code = '9999';
+		SET outputRef.messageResponse.message = Environment.Variables.exceptionMessage;
+		--Creating Mongo Lookup variables
+		SET Environment.Variables.gcKeyName = 'CREATEPOLICY';
+		IF Environment.Variables.isConsumable = 'false' THEN
+			SET OutputLocalEnvironment.Destination.RouterList.DestinationData[1].labelName = 'AckFailurePublish';
+			PROPAGATE TO TERMINAL 'out1' DELETE NONE;
+			RETURN FALSE;
+		ELSE
+			SET Environment.Variables.ackFail = true;
+			RETURN TRUE;
+		END IF;
+	END;
+END MODULE;

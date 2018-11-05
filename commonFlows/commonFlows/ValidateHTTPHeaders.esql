@@ -1,0 +1,51 @@
+
+
+BROKER SCHEMA commonFlows
+DECLARE TRUSTPATH EXTERNAL CHARACTER ' ';
+DECLARE PASSWORD EXTERNAL CHARACTER ' ';
+DECLARE ISSUER EXTERNAL CHARACTER ' ';
+CREATE COMPUTE MODULE ValidateHTTPHeaders
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+		SET OutputRoot = InputRoot;
+		DECLARE returnedValue BOOLEAN;
+		DECLARE brok CHARACTER BrokerDataSource;
+		DECLARE token CHARACTER InputRoot.HTTPInputHeader.Authorization;
+		SET token = SUBSTRING(token AFTER 'Bearer ');
+		SET returnedValue = TRUE; --callmethod(token,TRUSTPATH,PASSWORD,ISSUER);
+		SET Environment.Variables.Destination = InputLocalEnvironment.Destination;
+		SET Environment.Variables.Properties = InputRoot.Properties;	
+		DECLARE restInputRef REFERENCE TO InputLocalEnvironment.REST.Input;
+		DECLARE headerRef REFERENCE TO restInputRef.Parameters;
+		DECLARE operationRef REFERENCE TO InputLocalEnvironment.REST.Input;
+		SET Environment.Properties = InputRoot.Properties;
+		--validating headers
+		IF returnedValue = TRUE THEN
+			IF operationRef.Operation = 'activateUserProfile' THEN
+			SET Environment.Variables.HTTPInput = operationRef;
+			PROPAGATE TO TERMINAL 'out2' DELETE NONE;
+			RETURN FALSE;
+		ELSE
+			IF headerRef.Authorization IS NULL OR headerRef.Authorization = '' OR FIELDNAME(headerRef.Authorization) IS NULL THEN
+				SET Environment.Variables.requiredHeader = 'Authorization';
+				PROPAGATE TO TERMINAL 'out' DELETE NONE;
+				RETURN FALSE;
+			END IF;
+			IF headerRef.correlationId IS NULL OR headerRef.correlationId = '' OR FIELDNAME(headerRef.correlationId) IS NULL THEN
+				SET Environment.Variables.requiredHeader = 'correlationId';
+				PROPAGATE TO TERMINAL 'out' DELETE NONE;
+				RETURN FALSE;
+			END IF;
+		END IF;
+		PROPAGATE TO TERMINAL 'out1' DELETE NONE;
+		ELSE
+			SET Environment.Variables.requiredHeader.tokenMsg = 'Invalid Token/Signature';
+			PROPAGATE TO TERMINAL 'out' DELETE NONE;
+		END IF;
+		RETURN FALSE;
+	END;
+	CREATE PROCEDURE callmethod( IN P1 CHARACTER,IN P2 CHARACTER,IN P3 CHARACTER,IN P4 CHARACTER) RETURNS BOOLEAN
+	LANGUAGE JAVA
+	EXTERNAL NAME "com.ibm.tokenvalidation.JWTValidator.validateToken";
+END MODULE;

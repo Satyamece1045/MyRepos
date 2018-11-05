@@ -1,0 +1,50 @@
+
+
+
+BROKER SCHEMA common.exception
+
+CREATE COMPUTE MODULE BuildJSONFaultResponse
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+		IF Environment.Variables.requiredHeader.tokenMsg<>'' OR Environment.Variables.requiredHeader.tokenMsg IS NOT NULL OR FIELDNAME(Environment.Variables.requiredHeader.tokenMsg) IS NOT NULL THEN
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 403 Forbidden ';
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 403;
+			SET OutputRoot.JSON.Data.message = Environment.Variables.requiredHeader.tokenMsg;
+		ELSE
+			SET OutputRoot.HTTPResponseHeader.correlationId = COALESCE(Environment.Variables.requestHeader.correlationId, '');
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader.businessSystem = SQL.MessageFlowLabel;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 400 Bad Request';
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 400;
+			DECLARE exceptionMessage CHARACTER;
+			DECLARE parserErrorMsg,fieldName CHARACTER;
+			DECLARE ptrException REFERENCE TO Environment.Variables.DBInputData.JSON.Data.exception.*[<];
+			WHILE LASTMOVE(ptrException) DO
+				DECLARE parserExp REFERENCE TO ptrException.RecoverableException.*[>];
+				DECLARE parserExpMessage REFERENCE TO parserExp.ParserException.*[2];
+				IF parserExpMessage.Insert[5].Text IS NOT NULL THEN
+					SET parserErrorMsg = parserExpMessage.Insert[5].Text;
+				END IF;
+				IF parserExpMessage.Insert[6].Text IS NOT NULL THEN
+					SET fieldName = parserExpMessage.Insert[6].Text;
+					SET fieldName = SUBSTRING(CAST(fieldName AS CHARACTER )FROM POSITION('/' IN fieldName REPEAT -1) + 1);
+				END IF;
+				MOVE ptrException LASTCHILD;
+			END WHILE;
+			IF FIELDNAME(Environment.Variables.requiredHeader) IS NULL THEN
+				SET OutputRoot.JSON.Data.message = parserErrorMsg || 'for field ' || fieldName;
+			ELSE
+				SET OutputRoot.JSON.Data.message = Environment.Variables.requiredHeader || ' is required';
+			END IF;
+			IF Environment.Variables.isConsumable = 'false' THEN
+				RETURN FALSE;
+			ELSE
+				SET OutputRoot.JSON.Data = InputRoot.JSON.Data;
+				RETURN TRUE;
+			END IF;
+
+		END IF;
+		RETURN TRUE;
+	END;
+END MODULE;

@@ -1,0 +1,31 @@
+
+/*$mqsi CommonFlows_ESQL_VERSION = 1 MQSI$
+v1 Arun Kumar Nov 14, 2016 - version 0.1
+*/
+BROKER SCHEMA authorization
+
+CREATE FILTER MODULE CheckAuthorization
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+		DECLARE count INTEGER Root.JSON.Data._returned;
+		IF (count = 1) THEN
+			RETURN TRUE;
+		ELSE
+			SET Environment.Variables.throwUserException = 'true';
+			SET Environment.Variables.exceptionCode = '2035';
+			SET Environment.Variables.exceptionMessage = 'Unauthorized User';
+			IF (count = 0) THEN
+				THROW USER EXCEPTION MESSAGE 2035 VALUES(Environment.Variables.exceptionCode, Environment.Variables.exceptionMessage);
+				RETURN FALSE;
+			ELSE
+				THROW USER EXCEPTION MESSAGE 2035 VALUES(Environment.Variables.exceptionCode, Environment.Variables.exceptionMessage);
+				RETURN UNKNOWN;
+			END IF;
+
+		END IF;
+
+		RETURN TRUE;
+	END;
+
+END MODULE;

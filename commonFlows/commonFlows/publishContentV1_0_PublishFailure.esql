@@ -1,0 +1,10 @@
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE publishContentV1_0_PublishFailure
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET	Environment.Variables.PublishStatus = 'TOPIC ERROR';
+		RETURN TRUE;
+	END;
+END MODULE;

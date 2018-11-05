@@ -1,0 +1,21 @@
+BROKER SCHEMA common.database
+
+CREATE COMPUTE MODULE preparePutRes
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+			IF Environment.Variables.responseOutputTreeLoc = 'dbPutResponse' THEN
+				SET OutputRoot.JSON.Data = InputRoot.JSON.Data.dbPutResponse.Data;
+			END IF;
+			SET Environment.Variables.HTTPRespHeaders = InputRoot.HTTPResponseHeader;
+			SET Environment.Variables.gcKeyName = Environment.Variables.tempGCKeyName;
+			DELETE FIELD Environment.Variables.docid;
+			DELETE FIELD Environment.Variables.filterString;
+			DELETE FIELD Environment.Variables.DATABASE;
+			DELETE FIELD Environment.Variables.COLLECTION_NAME;
+			DELETE FIELD Environment.Variables.responseInputTreeLoc;
+			DELETE FIELD Environment.Variables.responseOutputTreeLoc;
+			DELETE FIELD Environment.Variables.OPERATION_NAME;
+		RETURN TRUE;
+	END;
+END MODULE;

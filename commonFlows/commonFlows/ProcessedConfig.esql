@@ -1,0 +1,16 @@
+
+/*$mqsi CommonFlows_ESQL_VERSION = 1 MQSI$
+v1 GANESH KUMAR K Sep 28, 2016 - Base version
+*/
+
+BROKER SCHEMA commonFlows
+
+CREATE COMPUTE MODULE ProcessedConfig
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		--Assign state of the event
+		SET Environment.Variables.eventState = 'PROCESSED';
+		SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+		RETURN TRUE;
+	END;
+END MODULE;

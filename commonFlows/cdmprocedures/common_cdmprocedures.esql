@@ -1,0 +1,39 @@
+BROKER SCHEMA cdmprocedures
+
+CREATE COMPUTE MODULE common_cdmprocedures
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- CALL CopyMessageHeaders();
+		-- CALL CopyEntireMessage();
+		RETURN TRUE;
+	END;
+/*
+ *
+ * File Name: common_cdmprocedures.esql
+ *
+ * Purpose:   constructed the details of persion details.
+ * 
+ * Authors:   Arun Kumar
+ *                 
+ * Date      06 August 2016
+ * Version:  1.0
+ *
+ * @copyright  AWPL SA Ltd. 2008.  All rights reserved.
+ *
+ */
+	CREATE PROCEDURE constructCDMForPersionDetails ( )
+	BEGIN
+		
+	END;
+	
+	CREATE PROCEDURE constructCDMForpolicyDetails ( )
+	BEGIN
+		
+	END;
+	
+	CREATE PROCEDURE constructCDMForVehicleDetails ( )
+	BEGIN
+		
+	END;
+	
+END MODULE;

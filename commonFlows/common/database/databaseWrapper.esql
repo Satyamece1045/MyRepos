@@ -1,0 +1,28 @@
+/*$mqsi databaseWrapper.subflow_ESQL_VERSION = 1 MQSI$
+v1 Samba Raju Golusula November 21, 2016 - Base version
+v2 Samba Raju Golusula December 06, 2016 - Updated version
+*/
+BROKER SCHEMA common.database
+
+CREATE COMPUTE MODULE databaseWrapper
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CREATE FIELD Environment.Variables Type Name;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		SET envRef.DBGcRef = InputRoot.JSON.Data;
+		DECLARE operationMethodName REFERENCE TO envRef.DBGcRef.OPERATION;
+		CASE operationMethodName
+		WHEN 'GET' THEN
+			PROPAGATE TO TERMINAL 'out';
+		WHEN 'POST' THEN
+			PROPAGATE TO TERMINAL 'out1';
+		WHEN 'PATCH' THEN
+			PROPAGATE TO TERMINAL 'out2';
+		WHEN 'PUT' THEN
+			PROPAGATE TO TERMINAL 'out3';
+		WHEN 'DELETE' THEN
+			PROPAGATE TO TERMINAL 'out4';
+		END CASE;
+		RETURN FALSE;
+	END;
+END MODULE;

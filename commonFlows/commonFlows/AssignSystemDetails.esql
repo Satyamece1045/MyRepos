@@ -1,0 +1,39 @@
+/*$MQSI CheckAuthorization.esql_ESQL_VERSION = 1 MQSI$
+v1 Arun Kumar Oct 28 - Base version
+v2 Ganesh Kumar K July 27 - Code Cleanup
+*/
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE AssignSystemDetails
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		--Assign actual publish topic details
+		SET Environment.Variables.gcKeyName = TRIM(UCASE(Environment.Variables.OPERATION));
+		
+  	END;
+END MODULE;
+
+
+CREATE COMPUTE MODULE SetPublishedEvent
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		--Assign actual publish topic details
+		SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+		SET Environment.Variables.eventState = 'PUBLISHED';
+		RETURN TRUE;
+  	END;
+END MODULE;
+
+CREATE COMPUTE MODULE SetProcessedEvent
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		--Assign actual publish topic details
+		SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+		SET Environment.Variables.eventState = 'PROCESSED';
+		RETURN TRUE;
+  	END;
+END MODULE;

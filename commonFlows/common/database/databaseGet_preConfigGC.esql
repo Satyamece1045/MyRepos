@@ -1,0 +1,12 @@
+BROKER SCHEMA common.database
+
+
+CREATE COMPUTE MODULE databaseGet_preConfigGC
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.tempGCKeyName = Environment.Variables.gcKeyName;
+		SET Environment.Variables.DBInputData = InputRoot;
+		SET Environment.Variables.gcKeyName = 'ESB.DB';
+		RETURN TRUE;
+	END;
+END MODULE;

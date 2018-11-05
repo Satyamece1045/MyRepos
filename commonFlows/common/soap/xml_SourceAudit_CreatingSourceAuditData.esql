@@ -1,0 +1,46 @@
+BROKER SCHEMA common.soap
+
+CREATE COMPUTE MODULE xml_SourceAudit_CreatingSourceAuditData
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+	    DECLARE sourceAsString character '';
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+		SET outputRef.correlationId = Environment.Variables.requestHeader.correlationId;
+		SET outputRef.messageId = Environment.Variables.requestHeader.messageId;
+		  CALL ComposeDetails(InputRoot,sourceAsString);
+		  SET outputRef.payload = sourceAsString;
+		--Creating Source Message Event headers
+		
+		SET outputRef.publishUTC = CURRENT_TIMESTAMP;
+		-- Setting env variables to call DB Common flow
+		-- Call DB common for POST/GET/PATCH method
+		SET Environment.Variables.docid = '';
+		SET Environment.Variables.filterString = '';
+		SET Environment.Variables.DATABASE = 'messageVault';
+		SET Environment.Variables.COLLECTION_NAME = 'sourceMessages';
+		SET Environment.Variables.responseInputTreeLoc= '';
+		SET Environment.Variables.responseOutputTreeLoc= '';
+		RETURN TRUE;
+	END;
+
+CREATE PROCEDURE ComposeDetails(IN root REFERENCE,INOUT concatString CHARACTER)
+	BEGIN
+		DECLARE fieldName CHARACTER;
+		DECLARE fieldValue CHARACTER;
+		DECLARE cursor REFERENCE TO root;
+		MOVE cursor FIRSTCHILD;
+		WHILE LASTMOVE(cursor) Do
+			SET fieldName = FIELDNAME(cursor);
+			SET fieldValue = FIELDVALUE(cursor);
+			IF (fieldValue is not null) THEN
+				SET concatString = concatString ||'<'||fieldName||'>' ||fieldValue||'</'||fieldName||'>';
+			ELSE
+				SET concatString = concatString ||'<'||fieldName||'>';
+				CALL ComposeDetails(cursor, concatString);
+				SET concatString = concatString ||'</'||fieldName||'>';
+			END IF;
+			MOVE cursor NEXTSIBLING;
+		END WHILE;
+	END;
+END MODULE;

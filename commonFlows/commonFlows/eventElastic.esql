@@ -1,0 +1,39 @@
+
+BROKER SCHEMA commonFlows
+CREATE COMPUTE MODULE eventElastic
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+        IF (InputRoot.JSON.Data.IsElasticRequired = 'Y') THEN
+			SET OutputRoot.JSON.Data = Environment.Variables.DBInputData.JSON.Data.eventState;
+			SET OutputRoot.JSON.Data.esUrl= InputRoot.JSON.Data.esUrl;
+				IF (Environment.Variables.DBInputData.JSON.Data.eventState.eventState = 'FAILED' OR Environment.Variables.DBInputData.JSON.Data.eventState.eventState = 'TIMEOUT')THEN
+					IF (Environment.Variables.gcKeyName = 'IsElastic') THEN
+		
+						SET OutputRoot.JSON.Data.stateChangeTime = Environment.Variables.DBInputData.JSON.Data.eventState.stateChangeTime."$date";
+						PROPAGATE TO TERMINAL 'out1' DELETE NONE;
+					END IF;
+					SET OutputRoot.JSON.Data.stateChangeTime = Environment.Variables.stateChangeTime;
+					SET OutputRoot.JSON.Data.stateChangeTime."$date" = NULL;
+					PROPAGATE TO TERMINAL 'out';
+				ELSE
+					DECLARE stateChangeTime INTEGER CAST(Environment.Variables.DBInputData.JSON.Data.eventState.stateChangeTime."$date" AS INTEGER);
+					SET OutputRoot.JSON.Data.stateChangeTime = stateChangeTime;
+					SET OutputRoot.JSON.Data.stateChangeTime."$date" = NULL;
+		
+					PROPAGATE TO TERMINAL 'out1';
+				END IF;
+        ELSE
+        	SET OutputRoot.JSON.Data = Environment.Variables.DBInputData.JSON.Data.eventState;
+			
+			IF (Environment.Variables.DBInputData.JSON.Data.eventState.eventState = 'FAILED' OR Environment.Variables.DBInputData.JSON.Data.eventState.eventState = 'TIMEOUT')THEN
+			
+				SET OutputRoot.JSON.Data.stateChangeTime = Environment.Variables.stateChangeTime;
+				SET OutputRoot.JSON.Data.stateChangeTime."$date" = NULL;
+				PROPAGATE TO TERMINAL 'out';
+			END IF;
+		END IF;
+		
+		RETURN FALSE;
+	END;
+END MODULE;

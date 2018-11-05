@@ -1,0 +1,74 @@
+BROKER SCHEMA authorization
+
+
+CREATE COMPUTE MODULE settingTokenBody
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+		DECLARE inputref REFERENCE TO InputRoot.JSON.Data;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		IF envRef.gcKeyName = 'IDENTITY' THEN
+			
+        DECLARE granttype CHARACTER;
+        DECLARE clientid CHARACTER;
+        DECLARE clientsecret CHARACTER;
+        DECLARE scope CHARACTER;
+        DECLARE username CHARACTER;
+        DECLARE password CHARACTER;
+        
+        CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+        DECLARE refIdentity REFERENCE TO InputRoot.JSON.Data.identityBody;
+
+        SET granttype = refIdentity.grant_type;
+        SET clientid = refIdentity.client_id;
+        SET clientsecret = refIdentity.client_secret;
+        SET scope = refIdentity.scope;        
+        SET username = refIdentity.username;
+        SET password = refIdentity.password;        
+        SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/x-www-form-urlencoded'; 
+        
+        
+        IF (inputref.port = '') THEN
+        	SET OutputLocalEnvironment.Destination.HTTP.RequestURL = inputref.host||'/connect/token';
+        ELSE
+        	DECLARE serviceURL CHAR CAST(inputref.host AS CHARACTER) || ':' || CAST(inputref.port AS CHARACTER) || '/';
+        	SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||'connect/token';
+        END IF;
+       -- SET OutputLocalEnvironment.Destination.HTTP.RequestURL = InputRoot.JSON.Data.endpoint||'connect/token';
+        DECLARE bodyIdentityToken CHARACTER;        
+        SET bodyIdentityToken = 'grant_type='||granttype||'&client_id='||clientid||'&client_secret='||clientsecret||'&scope='||scope||'&username='||username||'&password='||password;
+        SET OutputRoot.BLOB.BLOB = CAST (bodyIdentityToken AS BLOB CCSID 1208 Encoding 546);
+        
+		ELSE
+			
+		DECLARE granttype CHARACTER;
+        DECLARE clientid CHARACTER;
+        DECLARE clientsecret CHARACTER;
+        
+        CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+        SET OutputRoot.JSON.Data = Environment.Variables;
+        DECLARE refIdentity REFERENCE TO InputRoot.JSON.Data.mobileapp;
+        SET granttype = refIdentity.grant_type;
+        SET clientid = refIdentity.client_id;
+        SET clientsecret = refIdentity.client_secret;
+        SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/x-www-form-urlencoded';
+        IF (inputref.port = '') THEN
+        	SET OutputLocalEnvironment.Destination.HTTP.RequestURL = inputref.host||'/api/v1/token';
+        ELSE
+        	SET OutputLocalEnvironment.Destination.HTTP.RequestURL = inputref.host||':'||inputref.port||'/api/v1/token';
+        END IF;
+        --SET OutputLocalEnvironment.Destination.HTTP.RequestURL = InputRoot.JSON.Data.port||'api/v1/token';
+        DECLARE bodyMobileAppToken CHARACTER;        
+        SET bodyMobileAppToken = 'grant_type='||granttype||'&client_id='||clientid||'&client_secret='||clientsecret;
+        SET OutputRoot.BLOB.BLOB = CAST (bodyMobileAppToken AS BLOB CCSID 1208 Encoding 546);
+		SET Environment.mobile.URL = inputref.host;	
+		SET Environment.mobile.port = inputref.port;
+		END IF;
+		
+		RETURN TRUE;
+	END;
+
+	
+END MODULE;
+
+

@@ -1,0 +1,42 @@
+/*$MQSI getSystemEnvAuthDetails.subflow_ESQL_VERSION = 1 MQSI$
+
+         v1 Abhilash 06/09/2016 - Base version
+*/
+
+
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE getSystemEnvAuthDetails_Compute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE systemName CHARACTER InputLocalEnvironment.Destination.SystemName;
+		DECLARE docType CHARACTER InputLocalEnvironment.Destination.DocumentType;
+		DECLARE environment CHARACTER;
+		IF CONTAINS(UPPER(BrokerName), 'DEV') THEN
+			SET environment = 'dev';
+		ELSEIF CONTAINS(UPPER(BrokerName), 'SIT') THEN
+			SET environment = 'sit';
+		ELSEIF CONTAINS(UPPER(BrokerName), 'UAT') THEN
+			SET environment = 'uat';
+		ELSEIF CONTAINS(UPPER(BrokerName), 'PROD') THEN
+			SET environment = 'prod';
+		ELSE
+			--Only for testing purpose and will be removed in prod
+			SET environment = 'dev';
+		END IF;
+			
+----		If no desired environment details(DEV,SIT,UAT,PROD) were not found use exception hadling and throw an error.
+		--SET OutputLocalEnvironment.Destination.HTTP.RequestURL = 'https://10.200.1.168:4443/config/esbConfig/?filter={''documentType'': '''|| docType ||'''}&keys={' || systemName || '.'|| environment ||':1}';
+       -- Setting env variables to call DB Common flow
+		-- Call DB common for POST/GET/PATCH method	
+	SET Environment.Variables.docid = '';
+	SET Environment.Variables.filterString = 'filter={''documentType'': '''|| docType ||'''}&keys={' || systemName || '.'|| environment ||':1}';
+	SET Environment.Variables.DATABASE = 'config';
+	SET Environment.Variables.COLLECTION_NAME = 'esbConfig';
+	--SET Environment.Variables.responseInputTreeLoc = 'PolicyDoc';
+	--SET Environment.Variables.responseOutputTreeLoc = 'polResponse';
+		RETURN TRUE;
+	END;
+
+END MODULE;

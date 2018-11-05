@@ -1,0 +1,57 @@
+
+/*$MQSI getAuthorizationDetails_Base64Authorization.esql_ESQL_VERSION = 1 MQSI$
+v1 Abhilash 30/09/2016 - Base version
+v2 Arun Kumar 26/10/2016 - version 0.1
+*/
+BROKER SCHEMA authorization
+PATH commonFlows;
+CREATE COMPUTE MODULE getAuthorizationDetails_Base64Authorization
+	DECLARE finalDecodMessage CHARACTER;
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE resourceVar, resourceType, method, apiName, original CHARACTER;
+		DECLARE refEnve REFERENCE TO Environment.Variables;
+		DECLARE requestHeaderRef REFERENCE TO refEnve.requestHeader;
+		DECLARE refResourcePath REFERENCE TO refEnve.RESOURCEPATH;
+		DECLARE refInputRoot REFERENCE TO InputRoot.JSON.Data.requestHeader;
+
+		IF UCASE(refInputRoot.messageType) IN (UCASE('CreatePolicy'), UCASE('UpdateVoucher'), UCASE('CashbackRandValue'), UCASE('AmendPolicy')) THEN
+			SET original = CAST(refInputRoot.security.identityToken AS CHARACTER CCSID 437);
+			SET resourceType = refInputRoot.messageType;
+			SET method = refInputRoot.messageType;
+		ELSEIF refResourcePath = '' OR refResourcePath IS NULL THEN
+			SET original = CAST(requestHeaderRef.Authorization AS CHARACTER CCSID 437);
+			SET resourceType = requestHeaderRef.RESOURCEPATH;
+			SET method = requestHeaderRef.OPERATION;
+			SET apiName = requestHeaderRef.APINAME;
+		ELSE
+			SET original = CAST(requestHeaderRef.Authorization AS CHARACTER CCSID 437);
+			SET resourceVar = SUBSTRING(refResourcePath FROM (POSITION('/' IN refResourcePath REPEAT 3) + 1));
+			SET method = refEnve.METHOD;
+			SET resourceType = refEnve.OPERATION;
+			SET apiName = SUBSTRING(resourceVar BEFORE '/');
+			SET refEnve.APINAME = apiName;
+		END IF;		
+
+
+		SET finalDecodMessage = SUBSTRING(SUBSTRING(original AFTER '.') BEFORE '.');
+		-- call getDecodeToken Procedure
+		DECLARE finalDecod CHARACTER getClaims(finalDecodMessage);
+
+		DECLARE decodedMsg BLOB BASE64DECODE(finalDecod);
+		DECLARE finalDecoded CHARACTER CAST(decodedMsg AS CHARACTER CCSID 437);
+		DECLARE role CHARACTER SUBSTRING(SUBSTRING(finalDecoded AFTER '"role":') BEFORE ']');
+		SET role = role||']';
+		IF role = '' OR role IS NULL THEN
+			SET role = SUBSTRING(SUBSTRING(finalDecoded AFTER '"role":"') BEFORE '",');
+			SET Environment.Variables.filterString = 'filter={"operationId":'''||CAST(resourceType AS CHARACTER)||''',"method":'''||CAST(method AS CHARACTER)||''',"roles":'''|| CAST(role AS CHARACTER) ||'''}';
+		ELSE
+			SET Environment.Variables.filterString = 'filter={"operationId":'''||CAST(resourceType AS CHARACTER)||''',"method":'''||CAST(method AS CHARACTER)||''',"roles":{"$in":'||CAST(role AS CHARACTER) ||'}}';
+
+		END IF;
+		SET Environment.Variables.docid = ' ';
+		SET Environment.Variables.DATABASE = 'config';
+		SET Environment.Variables.COLLECTION_NAME = 'esbConfig';
+		RETURN TRUE;
+	END;
+END MODULE;

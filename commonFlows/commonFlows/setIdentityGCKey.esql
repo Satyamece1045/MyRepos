@@ -1,0 +1,10 @@
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE setIdentityGCKey
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.gcKeyName = 'IDENTITY';
+		RETURN TRUE;
+	END;
+END MODULE;

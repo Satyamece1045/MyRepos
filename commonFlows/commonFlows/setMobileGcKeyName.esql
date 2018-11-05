@@ -1,0 +1,14 @@
+BROKER SCHEMA commonFlows
+
+
+
+CREATE COMPUTE MODULE setMobileGcKeyName
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+		SET Environment.Variables.Inputdata = InputRoot.JSON.Data;
+		SET Environment.Variables.gcKeyName = 'MOBILEAPP';
+		SET Environment.mobile.requestHeader = Environment.Variables.requestHeader;
+	END;
+END MODULE;
+

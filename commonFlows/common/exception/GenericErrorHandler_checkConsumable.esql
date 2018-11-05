@@ -1,0 +1,15 @@
+
+
+BROKER SCHEMA common.exception
+
+
+CREATE COMPUTE MODULE GenericErrorHandler_checkConsumable
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		IF Environment.Variables.isConsumable IS NULL THEN
+			RETURN TRUE;
+		END IF;
+			PROPAGATE TO TERMINAL 'out1' DELETE DEFAULT;
+			RETURN FALSE;
+	END;
+END MODULE;

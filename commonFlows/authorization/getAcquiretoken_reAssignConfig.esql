@@ -1,0 +1,13 @@
+BROKER SCHEMA authorization
+
+
+CREATE COMPUTE MODULE getAcquiretoken_reAssignConfig
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = Environment.Variables.sourceMessage;
+		DELETE FIELD Environment.Variables;
+		DELETE FIELD InputLocalEnvironment;
+		SET Environment.Variables.TOKEN = InputRoot.JSON.Data;	
+		RETURN TRUE;
+	END;
+END MODULE;

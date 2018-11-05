@@ -1,0 +1,164 @@
+
+/*$MQSI ExceptionHandler.subflow_ESQL_VERSION = 1 MQSI$
+v1 Dharvesh Mohideen JULY 27, 2017 - Base version
+v2 Tarun & Ganesh August 5, 2017 - V1.1 - Request message validation realted changes
+*/
+
+BROKER SCHEMA common.exception
+
+
+CREATE COMPUTE MODULE ExceptionHandler_PrepareExceptionCDM
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+		DECLARE envExceptionRef REFERENCE TO Environment.Exception;
+		DECLARE envRef1 REFERENCE TO Environment.Variables;
+
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		CREATE FIELD OutputRoot.JSON.Data.header TYPE Name;
+		DECLARE errormsg REFERENCE TO OutputRoot.JSON.Data.header;		
+
+
+		DECLARE ptrException REFERENCE TO InputExceptionList.*[1];
+		DECLARE errorIndex INT 0;
+		WHILE lastmove(ptrException) DO
+			IF ptrException.Number IS NOT NULL THEN
+				SET envRef1.exceptionMessage = ptrException.Text;
+				SET errormsg.correlationId = COALESCE(Environment.Variables.params.correlationId, Environment.Variables.requestHeader.correlationId);
+				SET errormsg.exceptionmessage = envRef1.exceptionMessage;
+				SET errorIndex = CARDINALITY(ptrException.Insert[]);
+				IF errorIndex <> 0 THEN
+					SET errorIndex = errorIndex-1;
+					IF errorIndex > 0 THEN
+						SET envRef1.msg = ptrException.Insert[errorIndex].Text;
+					END IF;
+				END IF;
+			END IF;
+			MOVE ptrException LASTCHILD;
+		END WHILE;
+		-- check if isConsumable is not null to send the response to the caller.
+		DECLARE restInputRef REFERENCE TO InputLocalEnvironment.REST.Input;
+		IF restInputRef.Operation IS NOT NULL OR restInputRef.Operation <> '' THEN
+			SET Environment.Variables.isConsumable = TRUE;
+		END IF;
+			
+		IF Environment.Variables.isConsumable = TRUE THEN
+
+			IF Environment.Variables.exceptionCode = 404 THEN
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 404 Not Found';
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 404;
+				PROPAGATE TO TERMINAL 'out1';
+				RETURN FALSE;
+			ELSEIF Environment.Variables.exceptionCode = 400 THEN
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 400 Bad Request';
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 400;
+				PROPAGATE TO TERMINAL 'out1';
+				RETURN FALSE;
+			ELSEIF CAST(envExceptionRef.Code AS INT) >=5000 AND CAST(envExceptionRef.Code AS INT) <=5999 THEN
+				SET OutputRoot.JSON.Data = envExceptionRef;
+				SET OutputRoot.JSON.Data.Text = REPLACE(OutputRoot.JSON.Data.Text, 'XML', 'JSON');
+				SET OutputRoot.JSON.Data.Details = envRef1.msg;
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 400 Bad Request';
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 400;
+				PROPAGATE TO TERMINAL 'out1';
+			ELSE
+				SET OutputRoot.JSON.Data.code = envExceptionRef.Code;
+				SET OutputRoot.JSON.Data.mesage = envExceptionRef.Details;
+				PROPAGATE TO TERMINAL 'out1' DELETE NONE;
+			END IF;
+
+			DELETE FIELD OutputRoot.JSON.Data.code;
+			DELETE FIELD OutputRoot.JSON.Data.mesage;
+		END IF;
+		IF FIELDNAME(Environment.Variables.params) IS NOT NULL THEN
+			SET OutputRoot.JSON.Data.header = Environment.Variables.params;
+		END IF;
+		SET OutputRoot.JSON.Data.header.publisherName = InputRoot.JSON.Data.publisherName;
+		SET OutputRoot.JSON.Data.header.nodeName = SQL.BrokerName;
+		CREATE FIELD OutputRoot.JSON.Data.originalMessage TYPE Name;
+		CREATE FIELD OutputRoot.JSON.Data.exception TYPE Name;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		DECLARE error REFERENCE TO OutputRoot.JSON.Data;
+
+		DECLARE errorOriginalMsg REFERENCE TO OutputRoot.JSON.Data.originalMessage;
+		DECLARE errorExceptionMsg REFERENCE TO OutputRoot.JSON.Data.exception;
+
+		DECLARE responseRef REFERENCE TO OutputRoot.JSON.Data;
+		DECLARE originalMessage CHARACTER Environment.Variables.OriginalMessage;
+
+		SET Environment.ExceptionList = InputExceptionList;
+		DECLARE EXCEPTIONBLOB BLOB ASBITSTREAM(Environment.ExceptionList);
+		--
+		--
+		--
+		--
+		--
+		-- IF FIELDNAME(envRef.requestHeader) IS NOT NULL THEN
+		-- SET errormsg.correlationId = envRef.requestHeader.correlationId;
+		-- ELSEIF InputLocalEnvironment.REST.Input.Parameters.correlationId IS NOT NULL THEN
+		-- SET errormsg.correlationId = InputLocalEnvironment.REST.Input.Parameters.correlationId;
+		-- ELSE
+		-- SET errormsg.correlationId = InputRoot.XMLNSC.PolicyMaster.requestHeader.correlationId;
+		-- END IF;
+		-- --Taking messageId from the InputLocalEnvironment RequestIdentifier
+		-- SET errormsg.messageId = InputLocalEnvironment.Destination.HTTP.RequestIdentifier;
+		-- SET errormsg.publishUTC = CURRENT_TIMESTAMP;
+		-- SET errormsg.BrokerName = BrokerName;
+		IF envRef.exceptionCode IS NOT NULL THEN
+			SET errormsg.exceptioncode = envRef.exceptionCode;
+			SET errormsg.exceptionmessage = envRef.exceptionMessage;
+		ELSE
+			SET envRef.exceptionCode = '500';
+			SET errormsg.exceptioncode = envRef.exceptionCode;
+		END IF;
+		--this is done here so that the orginal message MQMD is populated if present
+		IF (FIELDNAME(InputRoot.MQMD) IS NOT NULL) THEN
+			CALL setupErrorMessageWithExistingMQMD(errormsg,InputRoot.MQMD);
+		ELSE
+			IF (FIELDNAME(envRef.MQMD) IS NOT NULL) THEN
+				CALL setupErrorMessageWithExistingMQMD(errormsg,Environment.MQMD);
+			END IF;
+		END IF;
+		--Checking the input http headers are present or not
+		IF FIELDNAME(InputRoot.HTTPInputHeader) IS NOT NULL THEN
+			SET errormsg.HTTPHeaders.HTTPInputHeader = InputRoot.HTTPInputHeader;
+		ELSE
+			IF FIELDNAME(envRef.HTTPInputHeader) IS NOT NULL THEN
+				SET errormsg.HTTPHeaders.HTTPInputHeader = Environment.HTTPInputHeader;
+			END IF;
+		END IF;
+		--checking HTTPResponseHeader
+		IF (FIELDNAME(envRef.HTTPResponseHeader) IS NOT NULL) THEN
+			SET errormsg.HTTPHeaders.HTTPResponseHeader = envRef.HTTPResponseHeader;
+		END IF;
+		--Prepare Exception Message
+		SET error.exception = InputExceptionList;
+		--Prepare Original Message
+		SET error.originalMessage = Environment.Message.OriginalMessage;		
+
+
+
+		DECLARE exceptionMessage CHAR;
+		--CALL getLastExceptionDetail(InputExceptionList,exceptionMessage);		
+
+
+		SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+		SET Environment.Variables.eventState = 'FAILED';
+		PROPAGATE TO TERMINAL 'out';
+
+		RETURN FALSE;
+	END;
+	CREATE PROCEDURE CopyMessageHeaders() BEGIN
+		DECLARE I INTEGER 1;
+		DECLARE J INTEGER;
+		SET J = CARDINALITY(InputRoot.*[]);
+		WHILE I < J DO
+			SET OutputRoot.*[I] = InputRoot.*[I];
+			SET I = I + 1;
+		END WHILE;
+	END;
+
+	CREATE PROCEDURE CopyEntireMessage() BEGIN
+		SET OutputRoot = InputRoot;
+	END;
+END MODULE;

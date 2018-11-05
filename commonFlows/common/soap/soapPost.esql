@@ -1,0 +1,33 @@
+BROKER SCHEMA common.soap
+
+
+CREATE COMPUTE MODULE soapPost
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		
+		--URL
+		DECLARE inRef REFERENCE TO InputRoot.JSON.Data;
+		DECLARE hostName CHARACTER inRef.host;
+		DECLARE portNumber CHARACTER inRef.port;
+	    DECLARE uriDefinition CHARACTER inRef.uri;
+	    
+		SET OutputLocalEnvironment.Destination.HTTP.RequestURL = hostName || ':' || portNumber || uriDefinition;	
+		
+		CREATE NEXTSIBLING OF OutputRoot.Properties NAME 'HTTPInputHeader';
+		SET OutputRoot.HTTPInputHeader."Content-Type" = 'text/xml; charset="utf-8"';
+		SET OutputRoot.HTTPInputHeader."SOAPAction" = COALESCE(Environment.Variables.SOAPACTION, InputRoot.JSON.Data.soapAction);
+		
+		IF InputRoot.JSON.Data.authentication = true THEN
+			SET OutputRoot.HTTPRequestHeader."Authorization" = 'Basic '||base64Encode(CAST('testing:testing' as BLOB CCSID InputRoot.Properties.CodedCharSetId)); 
+		END IF;
+		
+		SET OutputLocalEnvironment.Destination.HTTP.Timeout = COALESCE(InputRoot.JSON.Data.timeout, '40');
+		
+		--SET Payload
+		SET OutputRoot.XMLNSC =  Environment.Variables.SOAPPayload.Data;
+	
+		RETURN TRUE;
+	END;
+END MODULE;

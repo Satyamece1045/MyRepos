@@ -1,0 +1,154 @@
+BROKER SCHEMA commonFlows
+DECLARE HOST EXTERNAL CHARACTER ' ';
+DECLARE AUTHORIZATION EXTERNAL CHARACTER ' ';
+
+CREATE COMPUTE MODULE getDescriptions_Req 
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+	SET Environment.Variables.Data = InputRoot.JSON.Data;
+				
+	/*MARITAL STATUS*/				
+	CREATE FIELD Environment.Variables.Description type (JSON.Array);
+	DECLARE outDesRef REFERENCE TO Environment.Variables.Description;
+	DECLARE envref REFERENCE TO Environment.Variables.Data;
+	DECLARE maritalIndex INTEGER 1;
+		FOR inPayload AS InputRoot.JSON.Data.Item[] DO			
+			SET outDesRef.Item[maritalIndex].referenceNumber = inPayload.referenceNumber;
+			DECLARE persCount INTEGER 1;
+			FOR inLoad AS InputRoot.JSON.Data.Item[maritalIndex].personList.Item[] DO
+				DECLARE persCount INTEGER 1;
+				SET outDesRef.Item[maritalIndex].maritalStatusDescription = inLoad.maritalStatusDescription;
+				SET persCount = persCount + 1;
+			END FOR;
+		 	SET maritalIndex = maritalIndex + 1;
+		END FOR;
+	 	SET Environment.Variables.gcKeyName = 'MS';  
+	 PROPAGATE TO TERMINAL 'out' ;
+	 
+	/*GENDER*/	 
+	DECLARE genderIndex INTEGER 1;
+	FOR inPayload AS InputRoot.JSON.Data.Item[] DO			
+		SET outDesRef.Item[genderIndex].referenceNumber = inPayload.referenceNumber;
+		DECLARE persCount INTEGER 1;
+		FOR inLoad AS InputRoot.JSON.Data.Item[genderIndex].personList.Item[] DO
+			DECLARE persCount INTEGER 1;
+			SET outDesRef.Item[genderIndex].gender = inLoad.gender;
+			SET persCount = persCount + 1;
+		END FOR;
+	 	SET genderIndex = genderIndex + 1;
+	END FOR;
+ 	SET Environment.Variables.gcKeyName = 'SX'; 
+	PROPAGATE TO TERMINAL 'out';
+	
+	/*RelationshipGroup*/		
+	DECLARE relationIndex INTEGER 1;
+	FOR inPayload AS InputRoot.JSON.Data.Item[] DO			
+		SET outDesRef.Item[relationIndex].referenceNumber = inPayload.referenceNumber;
+		DECLARE persCount INTEGER 1;
+		FOR inLoad AS InputRoot.JSON.Data.Item[relationIndex].personList.Item[] DO
+			DECLARE persCount INTEGER 1;
+			SET outDesRef.Item[relationIndex].relationshipDescription = inLoad.additionalInformation.relationshipDescription;
+			SET persCount = persCount + 1;
+		END FOR;
+	 	SET relationIndex = relationIndex + 1;
+	END FOR;
+ 	SET Environment.Variables.gcKeyName = 'RG'; 
+	PROPAGATE TO TERMINAL 'out';
+	RETURN FALSE;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE getDescriptions_saveToGc
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DELETE FIELD Environment.Variables.GCSTATUS;
+		DECLARE inputRef REFERENCE TO InputRoot.JSON.Data;
+		--Throw back exception if Mongo doesn't have the config
+--		IF inputRef._returned = 0 THEN
+--			THROW USER EXCEPTION SEVERITY 3 VALUES('Global Cache','No config found in DB');
+--			RETURN FALSE;
+--		END IF;
+		IF inputRef._returned = 0 THEN
+			SET Environment.Variables.dbFound = 'FALSE';
+			PROPAGATE TO TERMINAL 'out1';
+			RETURN FALSE;
+		END IF;
+		IF inputRef._returned = 1 THEN
+			CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+			DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+			SET outputRef = InputRoot.JSON.Data._embedded.Item[1];
+			CREATE FIRSTCHILD of outputRef NAME 'requestType';
+			SET outputRef.requestType = Environment.Variables.gcKeyName;
+			SET Environment.gcData.{Environment.Variables.gcKeyName} = OutputRoot.JSON.Data;
+			DELETE FIELD outputRef._id;
+		ELSE 
+			IF inputRef._returned > 1 THEN
+				CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Array);
+				SET OutputRoot.JSON.Data.*[] = InputRoot.JSON.Data._embedded.*[];
+				SET Environment.gcData.{Environment.Variables.gcKeyName} = OutputRoot.JSON.Data;
+			END IF; 	
+		END IF;
+		SET Environment.Variables.dbFound = 'TRUE';
+		PROPAGATE TO TERMINAL 'out';
+		RETURN FALSE;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE getDescriptions_BuildDbReq
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot.JSON.Data = InputRoot.JSON.Data;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+--		IF envRef.langIndicator = '' OR envRef.langIndicator = NULL OR
+--			(envRef.langIndicator <> 'AF' AND envRef.langIndicator <> 'EN') THEN
+			SET envRef.langIndicator = 'EN';
+--		END IF;
+		
+		IF envRef.GCSTATUS = 'EMPTY' THEN
+			SET OutputLocalEnvironment.Destination.HTTP.RequestLine.Method = 'GET';		
+			IF SUBSTRING(envRef.gcKeyName FROM 1 FOR 6) = 'SUBURB' THEN
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/cache/static_addressSuburbs?filter={''sequenceNumber'': '''|| envRef.inGcKey ||'''}';				
+			ELSEIF SUBSTRING(envRef.gcKeyName FROM 1 FOR 6) = 'VEHKEY' THEN
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/cache/static_vehicleDescription?filter={''$and'':[{''languageIndicator'':''' || envRef.langIndicator || '''},{''key'': '''|| envRef.inGcKey ||'''}]}';
+			ELSEIF SUBSTRING(envRef.gcKeyName FROM 1 FOR 3) = 'SUP' THEN
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/cache/static_sti_supplier?filter={''supplierCode'': '''|| envRef.inGcKey ||'''}]}';
+			ELSEIF SUBSTRING(envRef.gcKeyName FROM 1 FOR 2) = 'BR' THEN
+				DECLARE VALUE CHAR;
+
+				SET VALUE = envRef.gcKeyName;
+				SET VALUE = TRIM('BR' FROM VALUE);
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/cache/static_brokers?filter={''brokerCode'': '''|| VALUE ||'''}]}';
+			ELSEIF SUBSTRING(envRef.gcKeyName FROM 1 FOR 2)= 'TX' THEN
+				DECLARE KEY, VALUE CHAR;
+				SET KEY = SUBSTRING(envRef.gcKeyName FROM 1 FOR 2); 
+				SET VALUE = SUBSTRING(envRef.gcKeyName FROM 3 FOR 4);
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/cache/static_common?filter={''$and'':[{''languageIndicator'':''' || envRef.langIndicator || '''},{''requestType'': '''|| 'TGENB'|| KEY ||'''},{''key'': '''|| VALUE ||'''}]}';
+			ELSEIF SUBSTRING(Environment.Variables.gcKeyName FROM 1 FOR 2) = 'BC' THEN
+				DECLARE KEY CHAR;
+				SET KEY = TRIM('BC' FROM envRef.gcKeyName);
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/cache/static_bankDescriptions?filter={''$and'':[{''languageIndicator'':''' || envRef.langIndicator || '''},{''sortCode'': '''|| KEY ||'''}]}';	
+			ELSEIF Environment.Variables.gcKeyName = 'BANKBRANCHCODES' THEN
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/config/financialInstitutions?&pagesize=1000'; 	  			
+			ELSE		
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = HOST ||'/cache/static_common?filter={''$and'':[{''languageIndicator'':''' || envRef.langIndicator || '''},{''requestType'': '''|| 'TGENB'|| envRef.gcKeyName ||'''}]}'||'&pagesize=1000';
+			END IF;  
+			SET OutputRoot.HTTPRequestHeader."Authorization" = AUTHORIZATION;
+			SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/json';
+			SET Environment.Variables.dbFound = 'FALSE';	
+			PROPAGATE TO TERMINAL 'out1';
+		ELSE
+			SET Environment.gcData.{envRef.gcKeyName} = InputRoot.JSON.Data;
+			SET envRef.dbFound = 'TRUE';
+			PROPAGATE TO TERMINAL 'out';
+		END IF;		
+		RETURN FALSE;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE getDescriptions_Error
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN		
+		SET Environment.Variables.dbFound = 'FALSE';
+	END;
+END MODULE;

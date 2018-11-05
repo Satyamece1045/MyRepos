@@ -1,0 +1,16 @@
+
+
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE payloadLogging
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE cursor REFERENCE TO InputRoot;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+		SET outputRef = cursor;
+		SET outputRef.correlationId = Environment.Variables.correlationId;
+		RETURN TRUE;
+	END;
+END MODULE;

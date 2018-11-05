@@ -1,0 +1,33 @@
+BROKER SCHEMA commonFlows
+
+
+
+CREATE COMPUTE MODULE PublishAndWaitOnStaticQueue_Configure_Queue_To_Get
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		IF (Environment.Variables.replyToBridgeQueue<>'') THEN
+			SET OutputLocalEnvironment.MQ.GET.QueueName = Environment.Variables.replyToBridgeQueue;
+		ELSE
+			SET OutputLocalEnvironment.MQ.GET.QueueName = 'ESB.VEHICLE.BRIDGE';
+		END IF;
+		
+		
+		--SET Environment.Variables.ReplyToQMGR = 'TTSAPIUAENODE01QM';
+		RETURN TRUE;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE PublishAndWaitOnStaticQueue_Set_Env
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		SET OutputRoot.MQMD = NULL;
+		SET OutputRoot.Properties = Environment.Variables.Properties;
+		SET OutputLocalEnvironment.Destination = Environment.Variables.Destination;
+		
+		RETURN TRUE;
+	END;
+
+	
+END MODULE;

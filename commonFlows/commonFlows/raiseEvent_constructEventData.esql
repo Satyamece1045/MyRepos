@@ -1,0 +1,89 @@
+BROKER SCHEMA commonFlows
+CREATE COMPUTE MODULE raiseEvent_constructEventData
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		--Updating CDM Collection
+		   
+        CREATE FIELD OutputRoot.JSON.Data.EvenState IDENTITY (JSON.Object)EvenState;
+        DECLARE refEventState REFERENCE TO OutputRoot.JSON.Data.EvenState;       
+		DECLARE cdmRef REFERENCE TO Environment.Variables.EvenState;
+		DECLARE count INT CARDINALITY(Environment.Variables.CDM[]);		
+----		DECLARE count INT CARDINALITY(refJSON.[]);
+        DECLARE start REFERENCE TO InputExceptionList.*[1];
+        DECLARE messageNumber INTEGER 0;
+        DECLARE messageText CHAR '';
+        IF InputExceptionList IS NULL THEN
+            IF InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" IS NOT NULL THEN
+                DECLARE httpRef REFERENCE TO InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code";
+                SET cdmRef.eventState.exceptionDetails.Item[1].messageNumber = httpRef;
+                SET cdmRef.eventState.eventState = 'EXCEPTION';
+                IF httpRef=200 OR httpRef=201 OR httpRef=202 OR httpRef=203 OR httpRef=204 OR httpRef=205 OR httpRef=206 OR httpRef=207 OR httpRef=208 OR httpRef=226  THEN
+                    SET cdmRef.eventState.eventState = 'PROCESSED';
+                    SET cdmRef.eventState.exceptionDetails.Item[1].messageText = InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line";
+                    --SET cdmRef.eventState.exceptionDetails = 'NO EXCEPTION FOUND';
+                ELSE
+                    SET cdmRef.eventState.eventState = 'EXCEPTION';
+                    SET cdmRef.eventState.exceptionDetails.Item[1].messageText = InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line";
+                END IF;
+            ELSE
+			    SET refEventState.eventState = 'PUBLISHED';
+			    CREATE FIELD refEventState.correlationId TYPE Name VALUE 'CORLTN1';
+			    CREATE FIELD refEventState.messageId TYPE Name VALUE 'MSG1';
+			    CREATE FIELD refEventState.messageType TYPE Name VALUE 'MSGTYPE1';
+			    CREATE FIELD refEventState.stateChangeTime TYPE Name VALUE '10:00';
+			    CREATE FIELD refEventState.processName TYPE Name VALUE 'PRS1';
+			    CREATE FIELD refEventState.sourceSystem TYPE Name VALUE 'SRC1';
+			    CREATE FIELD refEventState.requester TYPE Name VALUE 'REQST1';
+			    CREATE FIELD refEventState.subscriberName TYPE Name VALUE 'SBSCRB1';
+			    CREATE FIELD refEventState.publisherName TYPE Name VALUE 'PUB1';
+			    CREATE FIELD refEventState.lastActionedUser TYPE Name VALUE 'ACTNUSR';
+			    CREATE FIELD refEventState.exceptionDetail TYPE Name VALUE 'EXCPTN';
+            END IF;
+        ELSE
+            IF InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" IS NOT NULL THEN
+                DECLARE httpRef REFERENCE TO InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code";
+                SET cdmRef.eventState.exceptionDetails.Item[1].messageNumber = httpRef;
+                IF httpRef=200 OR httpRef=201 OR httpRef=202 OR httpRef=203 OR httpRef=204 OR httpRef=205 OR httpRef=206 OR httpRef=207 OR httpRef=208 OR httpRef=226  THEN
+                    SET cdmRef.eventState.eventState = 'PROCESSED';
+                    SET cdmRef.eventState.exceptionDetails.Item[1].messageText = InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line";
+                    --SET cdmRef.eventState.exceptionDetails = 'NO EXCEPTION FOUND';
+                ELSE
+                    SET cdmRef.eventState.eventState = 'EXCEPTION';
+                    SET cdmRef.eventState.exceptionDetails.Item[1].messageText = InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line";
+                END IF;
+            ELSE
+                SET cdmRef.eventState.eventState = 'EXCEPTION';
+                CALL getLastExceptionDetail(InputExceptionList, messageNumber, messageText);
+                SET cdmRef.eventState.exceptionDetails.Item[1].messageNumber = messageNumber;
+                SET cdmRef.eventState.exceptionDetails.Item[1].messageText = messageText;
+            END IF;
+        END IF;
+        SET cdmRef.eventState.publishUTC = CURRENT_TIMESTAMP;
+        SET cdmRef.eventState.stateChangeTime = CURRENT_TIMESTAMP;
+        SET cdmRef.eventState.processName = SQL.MessageFlowLabel;
+        SET OutputRoot.JSON.Data = cdmRef;
+        SET Environment.Variables.collectionname = 'canonicalMessages';
+        RETURN TRUE;
+    END;
+    CREATE PROCEDURE getLastExceptionDetail(IN InputTree reference,OUT messageNumber integer, OUT messageText char)
+    /****************************************************************************
+    * A procedure that will get the details of the last exception from a message
+    * IN InputTree: The incoming exception list
+    * IN messageNumber: The last message numberr.
+    * IN messageText: The last message text.
+    *****************************************************************************/
+    BEGIN
+        -- Create a reference to the first child of the exception list
+        DECLARE ptrException reference to InputTree.*[1];
+        -- keep looping while the moves to the child of exception list work
+        WHILE lastmove(ptrException) DO
+            -- store the current values for the error number and text
+            IF ptrException.Number is not null THEN
+                SET messageNumber = ptrException.Number;
+                SET messageText = ptrException.Text;
+            END IF;
+            -- now move to the last child which should be the next exceptionlist
+            move ptrException lastchild;
+        END WHILE;
+    END;
+END MODULE;

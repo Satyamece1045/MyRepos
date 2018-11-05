@@ -1,0 +1,20 @@
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE postToCache
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE envRef REFERENCE TO Environment.Variables;	
+		SET envRef.DATABASE = 'cache';
+		SET envRef.COLLECTION_NAME = 'riskitems';
+		SET envRef.responseInputTreeLoc = '';
+		SET envRef.responseOutputTreeLoc = '';
+		SET envRef.docid = '';
+		SET envRef.filterString ='';
+		SET Environment.Variables.gcKeyName = 'ESB.DB';
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		SET OutputRoot.JSON.Data = envRef.canonicalEventMessage.eventPayload;
+		--Delete sync reponse if not required
+		DELETE FIELD OutputRoot.JSON.Data.syncResponse;
+	END;
+END MODULE;

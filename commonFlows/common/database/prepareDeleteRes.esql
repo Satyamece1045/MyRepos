@@ -1,0 +1,22 @@
+BROKER SCHEMA common.database
+
+CREATE COMPUTE MODULE prepareDeleteResponse
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		IF Environment.Variables.responseOutputTreeLoc = 'dbGetResponse' THEN
+			SET OutputRoot.JSON.Data = InputRoot.JSON.Data.dbGetResponse.Data;
+		END IF;
+		SET Environment.Variables.gcKeyName = Environment.Variables.tempGCKeyName;
+		--deleting environment variables
+		DELETE FIELD Environment.Variables.docid;
+		DELETE FIELD Environment.Variables.filterString;
+		DELETE FIELD Environment.Variables.DATABASE;
+		DELETE FIELD Environment.Variables.COLLECTION_NAME;
+		DELETE FIELD Environment.Variables.responseInputTreeLoc;
+		DELETE FIELD Environment.Variables.responseOutputTreeLoc;
+		DELETE FIELD Environment.Variables.collEtagHeader;
+		DELETE FIELD Environment.Variables.OPERATION_NAME;		
+		RETURN TRUE;
+	END;
+END MODULE;

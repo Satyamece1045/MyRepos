@@ -1,0 +1,28 @@
+
+
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE cacheInsert_preparingRequestObject
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CALL CopyEntireMessage();
+		SET OutputRoot.HTTPRequestHeader."Authorization" ='Basic aWliZGV2OnBANTV3MHJk';
+		SET OutputRoot.HTTPRequestHeader."Content-Type" = 'application/json';
+		SET OutputLocalEnvironment.Destination.HTTP.RequestLine.Method = 'POST';
+		DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+		DECLARE colName CHARACTER outputRef.colName;
+		DELETE FIELD outputRef.colName;
+		
+		-- Setting env variables to call DB Common flow
+		-- Call DB common for POST/GET/PATCH method
+		SET Environment.Variables.docid = '';
+		SET Environment.Variables.filterString = '';
+		SET Environment.Variables.DATABASE = 'messageEvents';
+		SET Environment.Variables.COLLECTION_NAME = colName;
+		RETURN TRUE;
+	END;
+	CREATE PROCEDURE CopyEntireMessage() BEGIN
+		SET OutputRoot = InputRoot;
+	END;
+END MODULE;

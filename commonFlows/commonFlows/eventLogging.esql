@@ -1,0 +1,26 @@
+
+
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE eventLogging_notification
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CREATE FIELD OutputRoot.JSON.Data TYPE Name;
+		DECLARE refOut REFERENCE TO OutputRoot.JSON.Data;
+		CREATE FIELD refOut.requestHeader IDENTITY(JSON.Object)requestHeader;
+		SET refOut.requestHeader.requestType = Environment.Variables.requestType;
+		SET refOut.requestHeader.correlationId = Environment.Variables.correlationId;
+		SET refOut.eventState = Environment.Variables.eventState;
+		SET refOut.processName = Environment.Variables.processName;
+		IF Environment.Variables.publisherName IS NULL THEN
+			SET refOut.publisherName = SQL.MessageFlowLabel;
+		ELSE
+			SET refOut.publisherName = Environment.Variables.publisherName;
+		END IF;
+		SET refOut.requestHeader.publisherName = refOut.requestHeader.publisherName;
+		SET refOut.requestHeader.stateChangeTime = CURRENT_TIMESTAMP;
+		SET refOut.subscriberName = SQL.MessageFlowLabel;
+		RETURN TRUE;
+	END;
+END MODULE;

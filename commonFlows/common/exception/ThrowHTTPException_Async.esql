@@ -1,0 +1,52 @@
+/*$mqsi ThrowExceptionAsync.subflow_ESQL_VERSION = 1 MQSI$
+v1 Samba Raju Golusula JULY 12, 2016 - Base version
+V2 Samba Raju Golusula NOV 11, 2016 - Updated version
+*/
+
+BROKER SCHEMA common.exception
+
+CREATE COMPUTE MODULE ThrowHTTPException_Async
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CALL CopyEntireMessage();
+		CALL throwHTTPException_Async(Environment,InputRoot,InputExceptionList);
+		RETURN TRUE;
+	END;
+	CREATE PROCEDURE CopyEntireMessage() BEGIN
+		SET OutputRoot = InputRoot;
+	END;
+END MODULE;
+CREATE PROCEDURE throwHTTPException_Async(IN Environment REFERENCE, IN InputRoot REFERENCE, IN InputExceptionList REFERENCE)
+BEGIN
+	CREATE FIELD Environment.Variables Type Name;
+	DECLARE envRef REFERENCE TO Environment.Variables;
+-- TODO : code defaulted to swagger spec. Get the original http status code
+-- required if API call is RestSsagger spec. if not, colde will fail.
+-- X-Original-HTTP-Status-Code";
+	SET envRef.exceptionCode = InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code";
+	-- Save HTTP Response header
+	IF FIELDNAME(InputRoot.HTTPResponseHeader) IS NOT NULL THEN
+		SET envRef.exceptionMessage = InputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line";
+		SET envRef.HTTPResponseHeader = InputRoot.HTTPResponseHeader;
+		IF InputExceptionList IS NOT NULL THEN
+			SET envRef.Exception = InputExceptionList;
+			SET envRef.isConsumable = FALSE;
+			THROW USER EXCEPTION MESSAGE 2951 VALUES(envRef.exceptionCode, envRef.exceptionMessage, envRef.HTTPResponseHeader, envRef.Exception);
+		ELSE
+			SET envRef.throwUserException = 'true';
+			SET envRef.isConsumable = FALSE;
+			THROW USER EXCEPTION MESSAGE 2951 VALUES(envRef.exceptionCode, envRef.exceptionMessage, envRef.HTTPResponseHeader);
+		END IF;
+	ELSE
+		DECLARE ptrException reference to InputExceptionList.*[1];
+		WHILE lastmove(ptrException) DO
+			IF ptrException.Number is not null THEN
+				SET envRef.exceptionMessage = ptrException.Text;
+			END IF;
+			move ptrException lastchild;
+		END WHILE;
+		SET envRef.Exception = InputExceptionList;
+		SET envRef.isConsumable = FALSE;
+		THROW USER EXCEPTION MESSAGE 2951 VALUES(envRef.exceptionMessage, envRef.Exception);
+	END IF;
+END;

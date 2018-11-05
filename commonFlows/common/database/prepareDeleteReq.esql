@@ -1,0 +1,40 @@
+BROKER SCHEMA common.database
+
+CREATE COMPUTE MODULE prepareDeleteRequest
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE gcRef REFERENCE TO InputRoot.JSON.Data;
+		CREATE FIELD Environment.Variables Type Name;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		SET OutputRoot.JSON.Data =  envRef.DBInputData.JSON.Data;
+		SET OutputRoot.HTTPRequestHeader."Authorization" = gcRef.authorization || ' ' || gcRef.credentialsBase64;
+		SET OutputRoot.HTTPRequestHeader."Content-Type"  = 'application/json';
+		SET OutputRoot.HTTPRequestHeader."If-Match" = Environment.Variables.collEtagHeader;		
+		SET OutputLocalEnvironment.Destination.HTTP.RequestLine.Method = 'DELETE';
+		
+		DECLARE dbName CHARACTER envRef.DATABASE;
+		DECLARE colName CHARACTER envRef.COLLECTION_NAME;
+		DECLARE docId CHARACTER envRef.docid;
+		DECLARE filterString CHARACTER envRef.filterString;
+		
+		IF envRef.responseInputTreeLoc = '' OR FIELDNAME(envRef.responseInputTreeLoc) IS NULL THEN
+			SET envRef.responseInputTreeLoc = 'dbDeleteRequest';
+		END IF;
+		
+		IF envRef.responseOutputTreeLoc = '' OR FIELDNAME(envRef.responseOutputTreeLoc) IS NULL THEN
+			SET envRef.responseOutputTreeLoc = 'dbDeleteResponse';
+		END IF;
+		
+		DECLARE serviceURL CHAR gcRef.host || ':' || gcRef.port || '/';
+		IF docId <> '' AND docId IS NOT NULL  THEN
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName||'/'||docId;			
+		ELSEIF filterString <> '' AND filterString IS NOT NULL THEN
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName||'/*?'||filterString;			
+		ELSE
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName;
+		END IF;	
+		
+		RETURN TRUE;
+	END;
+
+END MODULE;

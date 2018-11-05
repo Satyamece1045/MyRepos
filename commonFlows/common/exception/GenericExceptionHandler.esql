@@ -1,0 +1,105 @@
+/*$mqsi GenericErrorHandling.subflow_ESQL_VERSION = 1 MQSI$
+v1 Samba Raju Golusula JULY 12, 2016 - Base version
+V2 Samba Raju Golusula NOV 11, 2016 - Updated version
+*/
+
+BROKER SCHEMA common.exception
+
+CREATE COMPUTE MODULE GenericExceptionHandler
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CREATE FIELD OutputRoot.JSON.Data.header Type Name;
+		DECLARE errormsg REFERENCE TO OutputRoot.JSON.Data.header;
+		CREATE FIELD Environment.Variables Type Name;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		--Saving original message
+		DECLARE originalMessage CHARACTER ASBITSTREAM(InputRoot);
+		SET envRef.isConsumable = TRUE;			
+		SET envRef.originalMessage = originalMessage;
+		--Taking Correlation Id from the request header
+		IF FIELDNAME(envRef.requestHeader) IS NOT NULL THEN
+			SET errormsg.correlationId 	= envRef.requestHeader.correlationId;
+		ELSEIF InputLocalEnvironment.REST.Input.Parameters.correlationId IS NOT NULL THEN
+			SET errormsg.correlationId 	= InputLocalEnvironment.REST.Input.Parameters.correlationId;
+		ELSE
+			SET errormsg.correlationId = InputRoot.XMLNSC.PolicyMaster.requestHeader.correlationId;
+		END IF;
+		--Taking messageId from the InputLocalEnvironment RequestIdentifier
+		SET errormsg.messageId 		= InputLocalEnvironment.Destination.HTTP.RequestIdentifier;
+		SET errormsg.publishUTC 	= CURRENT_TIMESTAMP;
+		SET errormsg.BrokerName 	= BrokerName;
+		--checking exceptioncode throwing from throwsync or async subflows
+		IF envRef.exceptionCode IS NOT NULL THEN
+			SET errormsg.exceptioncode 		= envRef.exceptionCode;
+			SET errormsg.exceptionmessage 	= envRef.exceptionMessage;
+		ELSE
+			SET envRef.exceptionCode = '500';
+			SET errormsg.exceptioncode 		= envRef.exceptionCode;			
+		END IF;
+        --checking InputExceptionList throwing from throwsync or async subflows
+		IF FIELDNAME(envRef.Exception) IS NOT NULL THEN
+			SET OutputRoot.JSON.Data.exception = envRef.Exception;
+			SET errormsg.exceptionmessage 	   = envRef.exceptionMessage;
+			--added because if the flow throw user defined exception
+		ELSEIF envRef.throwUserException = 'true' THEN
+			SET OutputRoot.JSON.Data.exception = InputExceptionList;
+		ELSE
+			SET OutputRoot.JSON.Data.exception = InputExceptionList;
+			DECLARE ptrException REFERENCE TO InputExceptionList.*[1];
+			WHILE lastmove(ptrException) DO
+				IF ptrException.Number IS NOT NULL THEN
+					SET envRef.exceptionMessage 	= ptrException.Text;
+					SET errormsg.exceptionmessage	= envRef.exceptionMessage;
+				END IF;
+				MOVE ptrException LASTCHILD;
+			END WHILE;
+		END IF;
+		--this is done here so that the orginal message MQMD is populated if present
+		IF (FIELDNAME(InputRoot.MQMD) IS NOT NULL) THEN
+			CALL setupErrorMessageWithExistingMQMD(errormsg,InputRoot.MQMD);
+		ELSE
+			IF (FIELDNAME(envRef.MQMD) IS NOT NULL) THEN
+				CALL setupErrorMessageWithExistingMQMD(errormsg,Environment.MQMD);
+			END IF;
+		END IF;
+		--Checking the input http headers are present or not
+		IF FIELDNAME(InputRoot.HTTPInputHeader) IS NOT NULL THEN
+			SET errormsg.HTTPHeaders.HTTPInputHeader = InputRoot.HTTPInputHeader;
+		ELSE
+			IF FIELDNAME(envRef.HTTPInputHeader) IS NOT NULL THEN
+				SET errormsg.HTTPHeaders.HTTPInputHeader = Environment.HTTPInputHeader;
+			END IF;
+		END IF;        
+		--checking HTTPResponseHeader
+		IF (FIELDNAME(envRef.HTTPResponseHeader) IS NOT NULL) THEN
+			SET errormsg.HTTPHeaders.HTTPResponseHeader 	= envRef.HTTPResponseHeader;
+		END IF;
+		--Creating GC Lookup variables
+		SET envRef.gcKeyName 				= 'AUDITEVENT';
+		--Assigning event section name
+		SET envRef.processName 				= SQL.MessageFlowLabel;
+		--Assinging state value
+		SET envRef.eventState 				= 'EXCEPTION';
+		SET envRef.DATABASE 				= 'messageVault';
+		SET envRef.COLLECTION_NAME 			= 'exceptionMessages';
+		SET OutputRoot.JSON.Data.originalMessage 	= envRef.originalMessage;		
+		--deleting environment variables
+		DELETE FIELD Environment.Variables.docid;
+		DELETE FIELD Environment.Variables.filterString;
+		DELETE FIELD Environment.Variables.responseInputTreeLoc;
+		DELETE FIELD Environment.Variables.responseOutputTreeLoc;
+		RETURN TRUE;
+	END;
+END MODULE;
+
+CREATE PROCEDURE setupErrorMessageWithExistingMQMD(IN errormsg REFERENCE, IN inMQMD REFERENCE)
+BEGIN
+	SET errormsg.MQHeaders.QueueManagerName = QueueManagerName;
+	SET errormsg.MQHeaders.SourceQueue 		= TRIM(inMQMD.SourceQueue);
+	SET errormsg.MQHeaders.MessageId 		= inMQMD.MsgId;
+	SET errormsg.MQHeaders.CodedCharSetId 	= inMQMD.CodedCharSetId;
+	SET errormsg.MQHeaders.Encoding 		= inMQMD.Encoding;
+	SET errormsg.MQHeaders.PutDate 			= inMQMD.PutDate;
+	SET errormsg.MQHeaders.PutTime 			= inMQMD.PutTime;
+	SET errormsg.MQHeaders.ReplyToQMgr 		= TRIM(inMQMD.ReplyToQMgr);
+END;

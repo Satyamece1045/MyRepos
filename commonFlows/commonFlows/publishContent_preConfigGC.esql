@@ -1,0 +1,64 @@
+
+/*$mqsi publishContent.subflow_ESQL_VERSION = 1 MQSI$
+v1 GANESH KUMAR K Sep 22, 2016 - Base version
+*/
+
+BROKER SCHEMA commonFlows
+
+CREATE COMPUTE MODULE publishContent_PreConfigGC
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputLocalEnvironment.Destination.HTTP.RequestLine.Method = 'GET';
+		DECLARE keyName CHAR Environment.Variables.gcKeyName;
+		--Save process start time for canonical event
+		IF FIELDNAME(Environment.Variables.startUTC) IS NULL THEN
+			SET Environment.Variables.startUTC = CURRENT_TIMESTAMP;
+		END IF;
+		IF Environment.Variables.gcKeyName IS NULL THEN
+				--Save original input header
+			IF FIELDNAME(InputRoot.MQMD) IS NOT NULL THEN
+				IF FIELDNAME(InputRoot.JSON) IS NOT NULL THEN
+					--Request came from AS400 for Morpheus
+					DECLARE inputRef REFERENCE TO InputRoot.JSON.Data.payload;
+					SET Environment.Variables.requestHeader = inputRef.header;
+					SET Environment.Variables.messageId = InputRoot.MQMD.MsgId;
+					CREATE FIELD Environment.Variables.sourceMessage IDENTITY (JSON.Object);
+					SET Environment.Variables.sourceMessage = inputRef;
+					SET Environment.Variables.REQUESTTYPE = 'JSON';
+				ELSE
+					--Request came from AS400
+					SET Environment.Variables.requestHeader = InputRoot.XMLNSC.*[2].requestHeader;
+					SET Environment.Variables.messageId = InputRoot.MQMD.MsgId;
+					CREATE FIELD Environment.Variables.sourceMessage IDENTITY (JSON.Object);
+					DECLARE inputRef REFERENCE TO InputRoot.JSON.Data;
+					SET Environment.Variables.sourceMessage = inputRef;
+				END IF;
+			ELSE
+				--Request came from HTTP
+				IF FIELDNAME(InputRoot.HTTPInputHeader) IS NOT NULL THEN					
+					DECLARE inputHeaderRef REFERENCE TO InputLocalEnvironment.REST.Input.Parameters;
+					SET Environment.Variables.requestHeader = inputHeaderRef;
+					IF InputLocalEnvironment.REST.Input.Method = 'GET' THEN
+						SET Environment.Variables.sourceMessage = InputLocalEnvironment.REST.Input;
+						SET Environment.Variables.sourceMessage.queryString = InputLocalEnvironment.HTTP.Input.QueryString;
+					ELSE
+						CREATE FIELD Environment.Variables.sourceMessage IDENTITY (JSON.Object);
+						DECLARE inputRef REFERENCE TO InputRoot.JSON.Data;
+						SET Environment.Variables.sourceMessage = inputRef;
+					END IF;
+					SET Environment.Variables.REQUESTTYPE = 'HTTP';
+					SET Environment.Variables.RESOURCEPATH = InputLocalEnvironment.REST.Input.Path;
+					SET Environment.Variables.OPERATION = InputLocalEnvironment.REST.Input.Operation;
+					SET Environment.Variables.METHOD = InputLocalEnvironment.REST.Input.Method;
+					IF inputHeaderRef.messageId = '' OR  inputHeaderRef.messageId IS NULL THEN
+						SET Environment.Variables.messageId = inputHeaderRef.messageId;
+					ELSE
+						SET Environment.Variables.messageId = CAST(InputLocalEnvironment.Destination.HTTP.RequestIdentifier AS CHARACTER);	
+					END IF;
+				END IF;
+			END IF;
+			SET Environment.Variables.gcKeyName = 'SOURCEAUDIT';
+		END IF;
+		RETURN TRUE;
+	END;
+END MODULE;

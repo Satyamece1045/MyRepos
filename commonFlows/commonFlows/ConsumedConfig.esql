@@ -1,0 +1,14 @@
+
+/*$mqsi CommonFlows_ESQL_VERSION = 1 MQSI$
+v1 GANESH KUMAR K Sep 28, 2016 - Base version
+*/
+
+BROKER SCHEMA commonFlows
+
+CREATE COMPUTE MODULE ConsumedConfig
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CALL CommonGCCHECK('AUDITEVENT', 'CONSUMED',InputRoot, Environment);
+	END;
+END MODULE;
+

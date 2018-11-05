@@ -1,0 +1,145 @@
+
+/*$mqsi publishContent.subflow_ESQL_VERSION = 1 MQSI$
+v1 GANESH KUMAR K Sep 22, 2016 - Base version
+*/
+
+BROKER SCHEMA commonFlows
+
+CREATE COMPUTE MODULE publishContent_AssigningTopicDetails
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE topicName CHAR InputRoot.JSON.Data.topicName;
+		SET OutputRoot.Properties.Topic = topicName;
+		DECLARE keyName CHAR Environment.Variables.gcKeyName;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+		IF keyName = 'SOURCEAUDIT' THEN
+			DECLARE headerRef REFERENCE TO Environment.Variables.requestHeader;
+			SET outputRef.nodeName = SQL.BrokerName;
+			SET outputRef.correlationId = headerRef.correlationId;
+			SET outputRef.messageId = Environment.Variables.messageId;
+			--Create Source Message Event headers & Call the Source Audit Subscriber
+			DECLARE sourceAsString character '';
+			DECLARE sourceMessageRef REFERENCE TO Environment.Variables.sourceMessage;
+			IF (Environment.Variables.REQUESTTYPE = 'HTTP' OR Environment.Variables.REQUESTTYPE = 'JSON') THEN
+				SET OutputLocalEnvironment.Destination.RouterList.DestinationData[1].labelName = Environment.Variables.OPERATION;
+				SET outputRef.payload = sourceMessageRef;
+			ELSE
+				CALL ComposeDetails(sourceMessageRef,sourceAsString);
+				SET outputRef.payload = sourceAsString;
+			END IF;
+		ELSE
+			DECLARE headerRef REFERENCE TO Environment.Variables.requestHeader;
+			SET outputRef.requestHeader = headerRef;
+			IF keyName = 'AUDITEVENT' THEN
+				--ASSIGN EVENT STATE VARIABLES
+				SET outputRef.eventState = Environment.Variables.eventState;
+				SET outputRef.nodeName = SQL.BrokerName;
+				SET outputRef.processName = COALESCE(Environment.Variables.processSectionName,Environment.Variables.OPERATION);
+				SET outputRef.subscriberName = SQL.MessageFlowLabel;
+				SET outputRef.exceptionDetail = Environment.Variables.exceptionMessage;
+				IF Environment.Variables.publisherName IS NULL THEN
+					SET outputRef.publisherName = SQL.MessageFlowLabel;
+				ELSE
+					SET outputRef.publisherName = Environment.Variables.publisherName;
+				END IF;
+				IF Environment.Variables.newCorrelId IS NULL THEN
+					IF Environment.Variables.canonicalEventMessage.eventHeader.processSection.childCorrelationId IS NULL THEN
+
+						SET outputRef.childCorrelationId =  COALESCE(Environment.Variables.params.correlationId, '');
+						
+					ELSE
+						SET outputRef.childCorrelationId = Environment.Variables.canonicalEventMessage.eventHeader.processSection.childCorrelationId;
+					END IF;
+				ELSE
+					SET outputRef.childCorrelationId = Environment.Variables.newCorrelId;
+				END IF;
+			ELSE
+				SET outputRef.nodeName = SQL.BrokerName;
+				SET outputRef.publisherName = SQL.MessageFlowLabel;
+				SET outputRef.publishUTC = CURRENT_TIMESTAMP;
+				IF Environment.Variables.OPERATION IS NULL THEN
+					SET Environment.Variables.OPERATION = Environment.Variables.canonicalEventMessage.eventHeader.processSection.name;
+				END IF;
+				SET outputRef.processSectionName = Environment.Variables.OPERATION;
+				SET outputRef.eventPayload = Environment.Variables.sourceMessage;
+				--Creating Canonical Event Message structure
+				CREATE FIELD OutputRoot.JSON.Data Type Name;
+				DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+				CREATE FIELD outputRef.canonicalEventMessage IDENTITY (JSON.Object)canonicalEventMessage;
+				--Creating Canonical Event Message - Header Structure
+				CREATE FIELD outputRef.canonicalEventMessage.eventHeader IDENTITY (JSON.Object)eventHeader;
+				--Creating Canonical Event Message - Header - Event Section Structure
+				DECLARE eventHeaderRef REFERENCE TO outputRef.canonicalEventMessage.eventHeader;
+				CREATE FIELD eventHeaderRef.eventSection IDENTITY (JSON.Object)eventSection;
+				DECLARE eventSectionRef REFERENCE TO eventHeaderRef.eventSection;
+				--Creating Canonical Event Message - Header - Process Section Structure
+				CREATE FIELD eventHeaderRef.processSection IDENTITY (JSON.Object)processSection;
+				DECLARE processSectionRef REFERENCE TO eventHeaderRef.processSection;
+				--Creating Canonical Event Message - Header - Identity Section Structure
+				CREATE FIELD eventHeaderRef.identitySection IDENTITY (JSON.Object)identitySection;
+				DECLARE identitySectionRef REFERENCE TO eventHeaderRef.identitySection;
+				--Creating Canonical Event Message - Header - Context Section Structure
+				CREATE FIELD eventHeaderRef.contextSection IDENTITY (JSON.Object)contextSection;
+				DECLARE contextSectionRef REFERENCE TO eventHeaderRef.contextSection;
+				--Creating Canonical Event Message - Payload Structure
+				CREATE FIELD outputRef.canonicalEventMessage.eventPayload IDENTITY (JSON.Object)eventPayload;
+				--Assigning values to the Canonical Event Message structure
+				DECLARE envRef REFERENCE TO Environment.Variables;
+				DECLARE inputRef REFERENCE TO InputRoot.JSON.Data;
+				DECLARE headerRef REFERENCE TO envRef.requestHeader;
+				--Assigning values to the Event Section
+				SET eventSectionRef.name = '';
+				SET eventSectionRef.id = headerRef.messageId;
+				SET eventSectionRef.publishUTC = headerRef.publishUTC;
+				SET eventSectionRef.source = headerRef.source;
+				SET eventSectionRef.sourceId= '';
+				SET eventSectionRef.requester = headerRef.userName;
+				--Assigning values to the Process Section
+				SET processSectionRef.correlationId = headerRef.correlationId;
+				SET processSectionRef.childCorrelationId = COALESCE(envRef.newCorrelId,'');
+				SET processSectionRef.name = envRef.OPERATION;
+				SET processSectionRef.startUTC = CURRENT_TIMESTAMP;
+				--Assigning values to the Identity Section
+				SET identitySectionRef.identityToken = headerRef.Authorization;
+				SET identitySectionRef.userName = headerRef.userName;
+				--Assigning values to the Context Section
+				SET contextSectionRef=envRef.params;
+				SET contextSectionRef.queryParams=envRef.queryParams;
+				--Assigning Payload
+				SET outputRef.canonicalEventMessage.eventPayload = envRef.sourceMessage;
+				SET outputRef.canonicalEventMessage.eventPayload.messageType = envRef.OPERATION;
+				-- Setting env variables to call DB Common flow
+				-- Call DB common for POST/GET/PATCH method
+				SET Environment.Variables.docid = '';
+				SET Environment.Variables.filterString = '';
+				SET Environment.Variables.DATABASE = 'messageVault';
+				SET Environment.Variables.COLLECTION_NAME = 'canonicalMessages';
+				SET Environment.Variables.responseInputTreeLoc= '';
+				SET Environment.Variables.responseOutputTreeLoc= '';
+				--config new correlationID status
+				SET Environment.Variables.newCorrelIdStatus = 'required';
+			END IF;
+		END IF;
+		RETURN TRUE;
+	END;
+	CREATE PROCEDURE ComposeDetails(IN root REFERENCE,INOUT concatString CHARACTER)
+	BEGIN
+		DECLARE fieldName CHARACTER;
+		DECLARE fieldValue CHARACTER;
+		DECLARE cursor REFERENCE TO root;
+		MOVE cursor FIRSTCHILD;
+		WHILE LASTMOVE(cursor) Do
+			SET fieldName = FIELDNAME(cursor);
+			SET fieldValue = FIELDVALUE(cursor);
+			IF (fieldValue is not null) THEN
+				SET concatString = concatString ||'<'||fieldName||'>' ||fieldValue||'</'||fieldName||'>';
+			ELSE
+				SET concatString = concatString ||'<'||fieldName||'>';
+				CALL ComposeDetails(cursor, concatString );
+				SET concatString = concatString ||'</'||fieldName||'>';
+			END IF;
+			MOVE cursor NEXTSIBLING;
+		END WHILE;
+	END;
+END MODULE;

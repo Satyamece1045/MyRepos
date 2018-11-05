@@ -1,0 +1,420 @@
+
+/*$mqsi CommonFlows_ESQL_VERSION = 1 MQSI$
+v1 Arun Kumar Nov 16, 2016 - Base version
+*/
+
+BROKER SCHEMA commonFlows
+
+DECLARE requestQueue EXTERNAL CHARACTER '';
+DECLARE replyToQueue EXTERNAL CHARACTER '';
+DECLARE apiReplyToQueue EXTERNAL CHARACTER '';
+
+CREATE PROCEDURE getClaims(In finalDecodMessage CHARACTER) Returns Character Language ESQL
+BEGIN
+	DECLARE count INTEGER (LENGTH(finalDecodMessage)-((LENGTH(finalDecodMessage)/4)*4));
+	---- Check if Encode Msg length is not multiple of 4
+	CASE count
+	WHEN 2 THEN
+		SET finalDecodMessage = finalDecodMessage || 'ff';
+	WHEN 3 THEN
+		SET finalDecodMessage = finalDecodMessage || 'f';
+	WHEN 1 THEN
+		SET finalDecodMessage = finalDecodMessage || 'fff';
+	END CASE;
+	Return finalDecodMessage ;
+END ;
+CREATE PROCEDURE CommonGCCHECK(IN gcKeyName CHARACTER, IN eventState CHARACTER, IN msg REFERENCE, IN refEnv REFERENCE)
+BEGIN
+	SET refEnv.Variables = msg.JSON.Data;
+	--Assign Event type
+	SET refEnv.Variables.gcKeyName = gcKeyName;
+	--Assign state of the event
+	SET refEnv.Variables.eventState = eventState;
+	--Assign Process Name
+	SET refEnv.Variables.processSectionName = SQL.MessageFlowLabel;
+	--Assign Request Header
+	SET refEnv.Variables.requestHeader = msg.JSON.Data.requestHeader;
+	--Assign source data
+	SET refEnv.Variables.sourceMessage = msg.JSON.Data.eventPayload;
+	SET refEnv.Variables.ReplyToQMgr = msg.MQMD.PutApplName;
+	SET refEnv.Variables.ReplyToQ = msg.MQMD.SourceQueue;
+	--RETURN TRUE;
+END;
+
+
+CREATE PROCEDURE toTitleCase ( IN word CHARACTER, OUT outWord CHARACTER ) 
+BEGIN
+	DECLARE newWord  CHARACTER '';
+	DECLARE tmpWord CHARACTER LCASE (word);
+	DECLARE data CHARACTER ;
+	DECLARE posSpace INTEGER ;
+	SET posSpace = POSITION(' ' IN tmpWord);
+	WHILE  LENGTH(tmpWord) > 0  DO
+		IF  posSpace = 0 THEN
+			SET posSpace = LENGTH(tmpWord);
+		END IF;
+		SET data = SUBSTRING (tmpWord FROM 1 FOR posSpace);
+		SET data = UPPER(LEFT(data,1)) || right(data,length(data)-1);
+		SET newWord = newWord ||  data ;
+		SET tmpWord = SUBSTRING (tmpWord FROM posSpace+1);
+		SET posSpace = POSITION(' ' IN tmpWord);
+	END WHILE;
+	SET outWord = TRIM(newWord);
+	
+END;
+
+
+CREATE COMPUTE MODULE Return_Ack
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE To OutputRoot.JSON.Data;
+		SET outputRef.ack_id = Environment.Variables.params.correlationId;
+		SET outputRef.request_date = CURRENT_TIMESTAMP;
+		SET outputRef.message = 'Request has been successfully accepted';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 202 Accepted';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 202;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE SetCorrelationId
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+		SET OutputLocalEnvironment = InputLocalEnvironment;
+		SET OutputRoot.MQMD.CorrelId = InputLocalEnvironment.WrittenDestination.MQ.DestinationData.msgId;
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+CREATE COMPUTE MODULE SetCorrelId_GetServices
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+		SET OutputLocalEnvironment = InputLocalEnvironment;
+		SET OutputRoot.MQMD.CorrelId =InputLocalEnvironment.WrittenDestination.MQ.DestinationData.msgId;
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+CREATE COMPUTE MODULE Router
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.newCorrelId = InputRoot.MQMD.CorrelId;
+		SET OutputRoot = InputRoot;
+		IF ((InputRoot.JSON.Data.canonicalEventMessage.eventHeader.processSection.name <> NULL) OR (InputRoot.JSON.Data.canonicalEventMessage.eventHeader.processSection.name <> '')) THEN
+			SET OutputLocalEnvironment.Destination.RouterList.DestinationData[1].labelName = InputRoot.JSON.Data.canonicalEventMessage.eventHeader.processSection.name;
+		ELSE
+			SET OutputLocalEnvironment.Destination.RouterList.DestinationData[1].labelName = InputRoot.JSON.Data.processSectionName;
+		END IF;
+				
+		RETURN TRUE;
+	END;
+END MODULE;
+
+CREATE PROCEDURE paramsToCDM (IN envRef REFERENCE,INOUT outputRef REFERENCE,IN locEnvRef REFERENCE)
+BEGIN
+		
+		CREATE FIELD outputRef.canonicalEventMessage IDENTITY (JSON.Object)canonicalEventMessage;
+		--Creating Canonical Event Message - Header Structure
+		CREATE FIELD outputRef.canonicalEventMessage.eventHeader IDENTITY (JSON.Object)eventHeader;
+		--Creating Canonical Event Message - Header - Event Section Structure
+		DECLARE eventHeaderRef REFERENCE TO outputRef.canonicalEventMessage.eventHeader;
+		CREATE FIELD eventHeaderRef.eventSection IDENTITY (JSON.Object)eventSection;
+		DECLARE eventSectionRef REFERENCE TO eventHeaderRef.eventSection;
+		--Creating Canonical Event Message - Header - Process Section Structure
+		CREATE FIELD eventHeaderRef.processSection IDENTITY (JSON.Object)processSection;
+		DECLARE processSectionRef REFERENCE TO eventHeaderRef.processSection;
+		--Creating Canonical Event Message - Header - Identity Section Structure
+		CREATE FIELD eventHeaderRef.identitySection IDENTITY (JSON.Object)identitySection;
+		DECLARE identitySectionRef REFERENCE TO eventHeaderRef.identitySection;
+		--Creating Canonical Event Message - Header - Context Section Structure
+		CREATE FIELD eventHeaderRef.contextSection IDENTITY (JSON.Object)contextSection;
+		DECLARE contextSectionRef REFERENCE TO eventHeaderRef.contextSection;
+		
+		--Assigning values to the Canonical Event Message structure
+		DECLARE headerRef REFERENCE TO envRef.Variables.params;
+		
+		--Assigning values to the Event Section
+		SET eventSectionRef.name = '';
+		SET eventSectionRef.messageId = headerRef.messageId;
+		SET eventSectionRef.publishUTC = headerRef.publishUTC;
+		SET eventSectionRef.source = headerRef.source;
+		
+		--Assigning values to the Process Section
+		SET processSectionRef.correlationId = headerRef.correlationId;
+		SET processSectionRef.name = locEnvRef.REST.Input.Operation;
+		
+		--Assigning values to the Identity Section
+		SET identitySectionRef.identityToken = headerRef.Authorization;
+		SET identitySectionRef.userName = headerRef.userName;
+		
+		--Assigning values to the Context Section
+		SET contextSectionRef= envRef.Variables.params;
+		
+		--Set OrigCorrId for ADD MQ Header
+		SET envRef.Variables.OrigCorrId = headerRef.correlationId;
+END;
+
+CREATE COMPUTE MODULE NoMessage_From_AS400
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE refEnv REFERENCE TO Environment.Variables;
+		DECLARE refInHeader REFERENCE TO Environment.Variables.requestHeader;
+
+		IF InputRoot.XMLNSC.[<1].responseHeader.messageResponse.code = '0000' THEN
+			SET refEnv.eventState = 'PROCESSED';
+			SET refEnv.gcKeyName = 'AUDITEVENT';
+			PROPAGATE TO TERMINAL 'out' DELETE NONE;
+		ELSE
+			SET refEnv.eventState = 'FAILED';
+			SET refEnv.gcKeyName = 'AUDITEVENT';
+			PROPAGATE TO TERMINAL 'out' DELETE NONE;
+		END IF;
+
+		RETURN FALSE;
+	END;
+
+END MODULE;
+CREATE COMPUTE MODULE NoMessage_Sync_AS400
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET Environment.Variables.eventState = 'TIMEOUT';
+		SET Environment.Variables.correlationId = Environment.Variables.params.correlationId;
+		SET Environment.Variables.processName = Environment.Variables.OPERATION;
+		SET OutputRoot = InputRoot;
+		SET OutputRoot.JSON.Data.code = 503;
+		SET OutputRoot.JSON.Data.message = 'IBMi Service Unavailable';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 503 IBMI Timeout';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 503;
+	RETURN TRUE;
+	END;
+
+END MODULE;
+
+CREATE COMPUTE MODULE NoMessage_FromAS400_SetDestinationList
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		SET OutputRoot.MQMD = InputRoot.MQMD;		
+		
+		IF TRIM(Environment.API.ReplyToQ) = '' THEN
+			SET OutputLocalEnvironment.Destination.MQ.DestinationData[1].queueName = 'ESB.VEHICLE.BRIDGE';
+		ELSE
+			SET OutputLocalEnvironment.Destination.MQ.DestinationData[1].queueName = Environment.API.ReplyToQ;
+		END IF;
+	    SET OutputLocalEnvironment.Destination.MQ.DestinationData[1].queueManagerName = Environment.API.ReplyToQMgr;
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+CREATE COMPUTE MODULE setDestinationList
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;		
+		SET OutputLocalEnvironment.Destination.MQ.DestinationData[1].queueName = Environment.API.ReplyToQ;
+	    SET OutputLocalEnvironment.Destination.MQ.DestinationData[1].queueManagerName = Environment.API.ReplyToQMgr;
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+
+CREATE COMPUTE MODULE longPull_removeMQMD_IBMi
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+	
+		IF InputRoot.JSON.Data.code <> 503 OR InputRoot.JSON.Data.code IS NULL THEN	
+			
+			IF EXISTS(InputRoot.JSON.Data.Item[]) THEN
+				CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Array);
+				SET OutputRoot.JSON.Data.*[] = InputRoot.JSON.Data.*[];
+			ELSE
+				CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+				SET OutputRoot.JSON.Data.*[] = InputRoot.JSON.Data.*[];
+			END IF;		
+		
+		ELSE
+			IF InputRoot.JSON.Data.code = 503  THEN	
+				--
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 503 IBMI Timeout';
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 503;
+			ELSE
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 504 Gateway Timeout';
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 504;
+				
+			END IF;
+			SET OutputRoot.JSON.Data.*[] = InputRoot.JSON.Data.*[];
+		END IF;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE API_map_No_Message
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 504 Gateway Timeout';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 504;
+		SET OutputRoot.JSON.Data.message = 'Server Timeout';
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE setProcessedState
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE envref REFERENCE TO Environment.Variables;
+		SET envref.gcKeyName = 'AUDITEVENT';
+		SET envref.eventState = 'PROCESSED';
+	END;
+END MODULE;
+CREATE COMPUTE MODULE setFailedState
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE envref REFERENCE TO Environment.Variables;
+		SET envref.gcKeyName = 'AUDITEVENT';
+		SET envref.eventState = 'FAILED';
+	END;
+END MODULE;
+CREATE COMPUTE MODULE mapNewCDM
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE inputRef REFERENCE TO InputRoot.JSON.Data;
+		IF inputRef.responseHeader.messageResponse.code = 9999  THEN
+			RETURN FALSE;
+		END IF;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		SET envRef.gcKeyName = SQL.MessageFlowLabel;
+		SET envRef.sourceMessage.syncResponse = inputRef.[<1].[<1];
+	END;
+END MODULE;
+CREATE COMPUTE MODULE validateAS400Response
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE responseRef REFERENCE TO InputRoot.XMLNSC.*[1];
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		IF responseRef.responseHeader.messageResponse.code = 0000 THEN
+			SET envRef.eventState = 'PROCESSED';
+			SET envRef.gcKeyName = 'AUDITEVENT';
+		ELSE
+			SET envRef.eventState = 'FAILED';
+			SET envRef.gcKeyName = 'AUDITEVENT';
+		END IF;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		SET OutputRoot.JSON.Data = responseRef;
+	END;
+END MODULE;
+CREATE COMPUTE MODULE mapAS400NoResponse
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE refEnv REFERENCE TO Environment.Variables;
+		SET refEnv.eventState = 'FAILED';
+		SET refEnv.gcKeyName = 'AUDITEVENT';
+		SET OutputRoot.MQMD.CorrelId=InputRoot.MQMD.CorrelId;
+		SET OutputLocalEnvironment.Destination.MQ.DestinationData[1].queueName = apiReplyToQueue;
+	    SET OutputLocalEnvironment.Destination.MQ.DestinationData[1].queueManagerName = Environment.API.ReplyToQMgr;
+		SET OutputRoot.JSON.Data.code = 503;
+		SET OutputRoot.JSON.Data.message = 'Service timed out. IBMi Service may be temporarily unavailable.';
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE isConsumable
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		SET OutputRoot = InputRoot;
+		SET Environment.Variables.isConsumable = TRUE;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE sendAck
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE To OutputRoot.JSON.Data;
+		SET outputRef.message = 'Request has been successfully accepted';	
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 202 Accepted';
+		SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 202;
+	END;
+END MODULE;
+
+CREATE COMPUTE MODULE sendIBMiAck
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE responseRef REFERENCE TO InputRoot.JSON.Data.responseHeader.messageResponse;
+		IF InputRoot.JSON.Data.code <> 503 OR InputRoot.JSON.Data.code IS NULL THEN
+			IF responseRef.code = '0000' THEN
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 201 Created';
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 201;
+				CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+				DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+				SET outputRef.*[] = InputRoot.JSON.Data.body.[<1].*[];
+			ELSE
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 200 OK';
+				SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 200;
+				CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+				DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+				SET outputRef.code = responseRef.code;
+				SET outputRef.message = responseRef.message;
+			END IF;
+		ELSE
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 504 Gateway Timeout';
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 504;
+		END IF;
+	END;
+END MODULE;
+CREATE PROCEDURE setEnvironment (IN refInput REFERENCE,IN refEnv REFERENCE,IN refOutput REFERENCE,IN rootName CHARACTER,IN msgType CHARACTER)
+BEGIN  
+	
+		SET refOutput.MQMD.Format = MQFMT_STRING;
+		SET refOutput.MQMD.MsgType = MQMT_REQUEST;
+		
+		--XMLNSC roottag for IBMi Request 
+	    CREATE FIRSTCHILD OF refOutput.XMLNSC TYPE XMLNSC.XmlDeclaration NAME 'XmlDeclaration';
+		SET refOutput.XMLNSC.(XMLNSC.XmlDeclaration)*.(XMLNSC.Attribute)Version = '1.0';
+		SET refOutput.XMLNSC.(XMLNSC.XmlDeclaration)*.(XMLNSC.Attribute)Encoding = 'UTF-8';
+		DECLARE refInRoot REFERENCE TO refEnv.Variables.params;
+		--Environment Variable Mapping
+
+		SET refEnv.Variables.Properties = refInput.Properties;
+		SET refEnv.Variables.OrigCorrId = refEnv.Variables.params.correlationId;
+		
+		--Header mapping
+		CREATE FIELD refOutput.XMLNSC.{rootName}.requestHeader;
+		DECLARE refOutHeader REFERENCE TO refOutput.XMLNSC.{rootName}.requestHeader;
+		
+		SET refOutHeader.correlationId = refInRoot.correlationId;
+		SET refOutHeader.messageId = COALESCE(refInRoot.messageId,refInRoot.correlationId);
+		SET refOutHeader.messageType = msgType;
+		SET refOutHeader.publishUTC = COALESCE(refInRoot.publishUTC,CURRENT_TIMESTAMP);
+		SET refOutHeader.sourceSystem = COALESCE(refInRoot.sourceSystem,'ESB');
+		SET refOutHeader.userName = COALESCE(refInRoot.userName,'DIALOSP');
+		CREATE FIELD refOutHeader.security TYPE Name;
+		DECLARE refSec REFERENCE TO refOutHeader.security;
+		SET refSec.identityToken ='';
+		SET refSec.userName ='';			
+		CREATE FIELD refOutHeader.environment TYPE Name;
+		DECLARE refEnv REFERENCE TO refOutHeader.environment;
+		SET refEnv.envIdentity =COALESCE(refInRoot.envIdentity,'');
+		SET refEnv.envOperator =COALESCE(refInRoot.envOperator,''); 
+		SET refEnv.envType =COALESCE(refInRoot.envType,''); 
+		
+		IF refInRoot.source ='1LIFE' THEN
+            SET refOutHeader.environment.envIdentity =COALESCE(refInRoot.envIdentity,'DEN1821');
+            SET refOutHeader.environment.envOperator =COALESCE(refInRoot.envOperator,'RA5493'); 
+            SET refOutHeader.environment.envType =COALESCE(refInRoot.envType,'ENV_TYP_1LIFEADMIN'); 
+        END IF;
+	END;
+
+CREATE PROCEDURE generateIBMiError (IN refInput REFERENCE, IN refOutput REFERENCE)
+BEGIN
+	DECLARE errorIndex INTEGER;				
+	CREATE FIELD refOutput.JSON.Data.errors IDENTITY (JSON.Array)errors;
+	SET errorIndex = 1;
+	DECLARE errorArray REFERENCE TO refOutput.JSON.Data.errors;
+	FOR perErrorItem AS refInput.XMLNSC.[<1].errorResponse.errors.errorMessage[] DO	
+		SET errorArray.Item[errorIndex].code = COALESCE(perErrorItem.errorType,'');
+		SET errorArray.Item[errorIndex].message =COALESCE(perErrorItem.errorDescription,'');	
+		SET errorIndex = errorIndex + 1;
+	END FOR;
+END;

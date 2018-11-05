@@ -1,0 +1,12 @@
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE publishLogMessage_PreConfigGC
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		   SET Environment.Variables.gcKeyName = 'AMLMESSAGEAUDIT';
+		   RETURN TRUE;
+	END;
+
+	
+END MODULE;

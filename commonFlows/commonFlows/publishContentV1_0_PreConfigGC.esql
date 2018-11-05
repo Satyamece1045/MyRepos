@@ -1,0 +1,38 @@
+
+
+BROKER SCHEMA commonFlows
+
+
+CREATE COMPUTE MODULE publishContentV1_0_PreConfigGC
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		--Saving original input header
+		IF FIELDNAME(InputRoot.MQMD) IS NOT NULL THEN
+			--Request came from AS400
+			SET Environment.Variables.requestHeader = InputRoot.XMLNSC.*[2].requestHeader;
+			SET Environment.Variables.messageId = InputRoot.MQMD.MsgId;
+		ELSE
+			--Request came from HTTP
+			IF InputRoot.HTTPRequestHeader <> '' THEN
+				SET Environment.Variables.requestHeader = InputRoot.JSON.Data.*[1].requestHeader;
+			END IF;
+		END IF;
+		SET OutputLocalEnvironment.Destination.HTTP.RequestLine.Method = 'GET';
+		DECLARE keyName CHAR Environment.Variables.gcKeyName;
+		--Saving process start time for canonical event
+		SET Environment.Variables.startUTC = CURRENT_TIMESTAMP;
+		IF keyName IS NULL THEN
+			SET OutputLocalEnvironment.Variables.gcKeyName = 'SOURCEAUDIT';
+			--Calling Source Message Event GC to get the Topic Name
+			SET Environment.Variables.sourceMessage = InputRoot.XMLNSC;
+			--SET OutputLocalEnvironment.Destination.HTTP.RequestURL = 'https://localhost:7843/gcservice/v1/globalcache/SOURCEAUDIT';
+		ELSE
+			SET OutputLocalEnvironment.Variables.gcKeyName = keyName;
+			--SET OutputLocalEnvironment.Destination.HTTP.RequestURL = 'https://localhost:7843/gcservice/v1/globalcache/' || keyName;
+			IF keyName <> 'AUDITEVENT' THEN
+				SET Environment.Variables.sourceMessage = InputRoot.JSON.Data;
+			END IF;
+		END IF;
+		RETURN TRUE;
+	END;
+END MODULE;

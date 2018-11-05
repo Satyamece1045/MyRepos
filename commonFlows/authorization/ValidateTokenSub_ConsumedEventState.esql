@@ -1,0 +1,13 @@
+BROKER SCHEMA authorization
+PATH commonFlows;
+
+
+CREATE COMPUTE MODULE ValidateTokenSub_ConsumedEventState
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		CALL CommonGCCHECK('AUDITEVENT', 'CONSUMED',InputRoot, Environment);
+		RETURN TRUE;
+	END;
+
+	
+END MODULE;

@@ -1,0 +1,67 @@
+
+
+BROKER SCHEMA commonFlows
+
+CREATE COMPUTE MODULE publishPartiesV1_0_AssingingTopicDetails
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE topicName CHAR InputRoot.JSON.Data.topicName;
+		SET OutputRoot.Properties.Topic = topicName;
+		DECLARE keyName CHAR Environment.Variables.gcKeyName;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+		--A UNIQUE SYSTEM GENERATED ID - MUST BE NULL DURING PUBLISH IF 1ST MESSAGE IN PROCESS
+		DECLARE headerRef REFERENCE TO Environment.Variables.PolicyMaster.requestHeader;
+
+		IF keyName IS NULL THEN
+			DECLARE headerRef REFERENCE TO Environment.Variables.requestHeader;
+			SET outputRef.correlationId = headerRef.correlationId;
+			SET outputRef.messageId = Environment.Variables.messageId;
+			--Creating Source Message Event headers & Call the Source Audit Subscriber
+			DECLARE sourceAsString character '';
+			DECLARE sourceMessageRef REFERENCE TO Environment.Variables.sourceMessage;
+			CALL ComposeDetails(sourceMessageRef,sourceAsString);
+			SET outputRef.payload = sourceAsString;
+			--SET outputRef.policyNumber = sourceMessageRef.PolicyMaster.PolicyNumber;
+		ELSE
+			DECLARE headerRef REFERENCE TO Environment.Variables.PolicyMaster.requestHeader;
+			--Sending header details
+			SET outputRef.requestHeader = headerRef;
+			IF keyName = 'CREATEPOLICY' THEN
+				SET outputRef.publishUTC = CURRENT_TIMESTAMP;
+				--A HUMAN READABLE NAME FOR THE PROCESS OF WHICH
+				SET outputRef.processSectionName = Environment.Variables.processSectionName;
+				--ASSIGN CDM AS PAYLOAD
+				SET outputRef.eventPayload = Environment.Variables.sourceMessage;
+			ELSEIF keyName = 'AUDITEVENT' THEN
+				--ASSING EVENT STATE VARIABLES
+				SET outputRef.eventState = Environment.Variables.eventState;
+				SET outputRef.publisherName = SQL.MessageFlowLabel;
+			ELSEIF keyName = 'UPDATEVOUCHER' THEN
+				SET outputRef.eventPayload = Environment.Variables.sourceMessage;
+			ELSE
+
+			END IF;
+		END IF;
+		RETURN TRUE;
+	END;
+	CREATE PROCEDURE ComposeDetails(IN root REFERENCE,INOUT concatString CHARACTER)
+	BEGIN
+		DECLARE fieldName CHARACTER;
+		DECLARE fieldValue CHARACTER;
+		DECLARE cursor REFERENCE TO root;
+		MOVE cursor FIRSTCHILD;
+		WHILE LASTMOVE(cursor) Do
+			SET fieldName = FIELDNAME(cursor);
+			SET fieldValue = FIELDVALUE(cursor);
+			IF (fieldValue is not null) THEN
+				SET concatString = concatString ||'<'||fieldName||'>' ||fieldValue||'</'||fieldName||'>';
+			ELSE
+				SET concatString = concatString ||'<'||fieldName||'>';
+				CALL ComposeDetails(cursor, concatString );
+				SET concatString = concatString ||'</'||fieldName||'>';
+			END IF;
+			MOVE cursor NEXTSIBLING;
+		END WHILE;
+	END;
+END MODULE;

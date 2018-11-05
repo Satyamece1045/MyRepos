@@ -1,0 +1,44 @@
+/*$MQSI CheckAuthorization.esql_ESQL_VERSION = 1 MQSI$
+v1 Abhilash 30/09/2016 - Base version
+v2 Arun Kumar 28/10/2016 - version 0.1
+*/
+
+BROKER SCHEMA authorization
+
+CREATE COMPUTE MODULE mapAPIResponse
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE count INTEGER InputRoot.JSON.Data._returned;
+		IF (count = 0)THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = Environment.Variables.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader.businessSystem = SQL.MessageFlowLabel;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 401 Not Accepted';
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 401;
+			SET OutputRoot.JSON.Data.message = 'Unauthorized User';
+			PROPAGATE TO TERMINAL 'out' DELETE DEFAULT;
+			-- RETURN FALSE;
+		ELSE
+			CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+			DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+			DECLARE envRequestHeader REFERENCE TO Environment.Variables.requestHeader;
+			SET envRequestHeader.APINAME = Environment.Variables.APINAME;
+			SET envRequestHeader.RESOURCEPATH = Environment.Variables.OPERATION;
+			SET envRequestHeader.OPERATION = Environment.Variables.METHOD;
+			SET outputRef.requestHeader = envRequestHeader;
+			SET outputRef.eventPayload = Environment.Variables.sourceMessage;
+			--Creating environment reference
+			DECLARE envRef REFERENCE TO Environment.Variables;
+			--Creating GC Lookup variables
+			SET envRef.gcKeyName = 'AUDITEVENT';
+			--Assigning event section name
+			SET envRef.processSectionName = envRef.requestHeader.serviceName;
+			--Assinging state value
+			SET envRef.eventState = 'PUBLISHED';
+			SET outputRef.requestHeader.security.identityToken = envRef.requestHeader.Authorization;
+            SET envRef.requestHeader = OutputRoot.JSON.Data.requestHeader;
+			PROPAGATE TO TERMINAL 'out1' DELETE DEFAULT;
+		END IF;
+		RETURN FALSE;
+	END;
+END MODULE;

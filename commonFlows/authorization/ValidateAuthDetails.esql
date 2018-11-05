@@ -1,0 +1,36 @@
+
+BROKER SCHEMA authorization
+
+CREATE COMPUTE MODULE ValidateAuthDetails
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE count INTEGER InputRoot.JSON.Data._returned;
+		IF (count <>1)THEN
+			SET OutputRoot.HTTPResponseHeader.correlationId = Environment.Variables.requestHeader.correlationId;
+			SET OutputRoot.HTTPResponseHeader.publishUTC = CURRENT_TIMESTAMP;
+			SET OutputRoot.HTTPResponseHeader.businessSystem = SQL.MessageFlowLabel;
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Line" = 'HTTP/1.1 401 Not Accepted';
+			SET OutputRoot.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 401;
+			SET OutputRoot.JSON.Data.message = 'Unauthorized User';
+			PROPAGATE TO TERMINAL 'out' DELETE DEFAULT;
+			-- RETURN FALSE;
+		ELSE
+			CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+			DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+			DECLARE envRequestHeader REFERENCE TO Environment.Variables.requestHeader;
+			SET envRequestHeader.APINAME = Environment.Variables.APINAME;
+			SET envRequestHeader.RESOURCEPATH = Environment.Variables.OPERATION;
+			SET envRequestHeader.OPERATION = Environment.Variables.METHOD;
+			SET outputRef.requestHeader = envRequestHeader ;
+			SET outputRef.eventPayload = Environment.Variables.sourceMessage;
+			--Assign Event type
+			SET Environment.Variables.gcKeyName = 'AUDITEVENT';
+			--Assign state of the event
+			SET Environment.Variables.eventState = 'CONSUMED';
+			--Assign Process Name
+			SET Environment.Variables.processSectionName = SQL.MessageFlowLabel;
+			PROPAGATE TO TERMINAL 'out1' DELETE DEFAULT;
+		END IF;
+		RETURN FALSE;
+	END;
+END MODULE;

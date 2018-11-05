@@ -1,0 +1,17 @@
+BROKER SCHEMA common.exception
+
+
+CREATE COMPUTE MODULE HTTPErrorHandler_ContructErrorResponse
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		IF Environment.Variables.HTTPResponseHeader."X-Original-HTTP-Status-Code" = 404  THEN
+			CREATE FIELD OutputRoot.JSON.Data Type Name;
+			SET OutputRoot.HTTPResponseHeader = InputRoot.HTTPResponseHeader;
+			PROPAGATE TO TERMINAL 'out';
+		ELSE
+			SET OutputRoot.JSON.Data = InputRoot.JSON.Data;
+			PROPAGATE TO TERMINAL 'out1';
+		END IF;
+		RETURN TRUE;
+	END;
+END MODULE;

@@ -1,0 +1,46 @@
+BROKER SCHEMA common.database
+
+CREATE COMPUTE MODULE databaseGet
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE gcRef REFERENCE TO InputRoot.JSON.Data;
+		CREATE FIELD Environment.Variables Type Name;
+		--DECLARE envRef ROW '';
+		--SET envRef = Environment.Variables;
+		DECLARE envRef REFERENCE TO Environment.Variables;
+		SET OutputRoot.JSON.Data =  envRef.DBInputData.JSON.Data;
+		SET OutputRoot.HTTPRequestHeader."Authorization" = gcRef.authorization || ' ' || gcRef.credentialsBase64;
+		SET OutputRoot.HTTPRequestHeader."Content-Type"  = 'application/json';
+		SET OutputLocalEnvironment.Destination.HTTP.RequestLine.Method = 'GET';
+		
+		DECLARE dbName CHARACTER envRef.DATABASE;
+		DECLARE colName CHARACTER envRef.COLLECTION_NAME;
+		DECLARE docId CHARACTER envRef.docid;
+		DECLARE filterString CHARACTER envRef.filterString;
+		DECLARE aggrString CHARACTER envRef.aggrString;
+		
+		IF envRef.responseInputTreeLoc = '' OR FIELDNAME(envRef.responseInputTreeLoc) IS NULL THEN
+			SET envRef.responseInputTreeLoc = 'dbGetRequest';
+		END IF;
+		
+		IF envRef.responseOutputTreeLoc = '' OR FIELDNAME(envRef.responseOutputTreeLoc) IS NULL THEN
+			SET envRef.responseOutputTreeLoc = 'dbGetResponse';
+		END IF;
+		
+		DECLARE serviceURL CHAR gcRef.host || ':' || gcRef.port || '/';
+		IF docId <> '' AND docId IS NOT NULL  THEN
+			IF filterString <> '' AND filterString IS NOT NULL THEN
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName||'/'||docId||'?'||filterString;
+			ELSE
+				SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName||'/'||docId;
+			END IF;
+		ELSEIF filterString <> '' AND filterString IS NOT NULL THEN
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName||'?'||filterString;
+		ELSEIF aggrString <> '' AND aggrString IS NOT NULL THEN
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName||aggrString;				
+		ELSE
+			SET OutputLocalEnvironment.Destination.HTTP.RequestURL = serviceURL ||dbName||'/'||colName;
+		END IF;	
+		RETURN TRUE;
+	END;
+END MODULE;

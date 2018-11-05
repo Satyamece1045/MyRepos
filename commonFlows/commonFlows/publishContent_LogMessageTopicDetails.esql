@@ -1,0 +1,26 @@
+BROKER SCHEMA commonFlows
+
+CREATE COMPUTE MODULE publishContent_LogMessageTopicDetails
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE topicName CHAR InputRoot.JSON.Data.topicName;
+		SET OutputRoot.Properties.Topic = topicName;
+		DECLARE inControlReqRef REFERENCE TO InputRoot.JSON.Data.canonicalEventMessage.eventPayload;
+		
+		DECLARE keyName CHAR Environment.Variables.gcKeyName;
+		CREATE FIELD OutputRoot.JSON.Data IDENTITY (JSON.Object);
+		DECLARE outputRef REFERENCE TO OutputRoot.JSON.Data;
+		DECLARE headerRef REFERENCE TO Environment.Variables.requestHeader;
+		
+		SET outputRef.SystemType = '1';  --dbo.systemType
+		SET outputRef.ServerName ='IIB';                    --dbo.systemType
+		SET outputRef.Process ='WesbankControlMessage';     --dbo.Process
+		SET outputRef.Log.ReferenceNumber= inControlReqRef.ReferenceNumber;
+		SET outputRef.MessageGuid = COALESCE(inControlReqRef.RequestGuid, UUIDASBLOB) ;  --@MessageGuid = 'A972C577-DFB0-064E-1189-0154C99310DAAC12',
+		SET outputRef.ParameterDetails =SQL.MessageFlowLabel || '-' || Environment.Variables.SOAPACTION;
+		SET outputRef.Url ='';
+
+		RETURN TRUE;
+	END;
+	
+END MODULE;
